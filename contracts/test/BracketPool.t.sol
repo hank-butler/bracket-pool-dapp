@@ -284,4 +284,114 @@ contract BracketPoolTest is Test {
         vm.expectRevert("Invalid results length");
         pool.setResults(results);
     }
+
+    // --- setMerkleRoot() ---
+
+    function _setupPoolForMerkleRoot() internal {
+        bytes32[] memory picks = _createPicks();
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 10_000e6);
+        pool.enter(picks, 145);
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        usdc.approve(address(pool), 10_000e6);
+        pool.enter(picks, 150);
+        vm.stopPrank();
+
+        vm.warp(lockTime + 1);
+
+        vm.prank(admin);
+        pool.setResults(_createPicks());
+    }
+
+    function test_setMerkleRoot_success() public {
+        _setupPoolForMerkleRoot();
+        uint256 poolValue = pool.totalPoolValue();
+        uint256 expectedFee = poolValue * 500 / 10000;
+
+        vm.prank(admin);
+        pool.setMerkleRoot(bytes32(uint256(1)));
+
+        assertEq(pool.merkleRoot(), bytes32(uint256(1)));
+        assertEq(usdc.balanceOf(treasury), expectedFee);
+        assertEq(usdc.balanceOf(address(pool)), poolValue - expectedFee);
+    }
+
+    function test_setMerkleRoot_emitsEvents() public {
+        _setupPoolForMerkleRoot();
+        uint256 poolValue = pool.totalPoolValue();
+        uint256 expectedFee = poolValue * 500 / 10000;
+
+        vm.prank(admin);
+        vm.expectEmit(false, false, false, true);
+        emit BracketPool.FeePaid(treasury, expectedFee);
+        vm.expectEmit(false, false, false, true);
+        emit BracketPool.MerkleRootSet(bytes32(uint256(1)));
+        pool.setMerkleRoot(bytes32(uint256(1)));
+    }
+
+    function test_setMerkleRoot_revert_notAdmin() public {
+        _setupPoolForMerkleRoot();
+
+        vm.prank(user1);
+        vm.expectRevert("Not authorized");
+        pool.setMerkleRoot(bytes32(uint256(1)));
+    }
+
+    function test_setMerkleRoot_revert_noResults() public {
+        bytes32[] memory picks = _createPicks();
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 10_000e6);
+        pool.enter(picks, 145);
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        usdc.approve(address(pool), 10_000e6);
+        pool.enter(picks, 150);
+        vm.stopPrank();
+
+        vm.warp(lockTime + 1);
+
+        vm.prank(admin);
+        vm.expectRevert("Results not posted");
+        pool.setMerkleRoot(bytes32(uint256(1)));
+    }
+
+    function test_setMerkleRoot_revert_doubleSet() public {
+        _setupPoolForMerkleRoot();
+
+        vm.prank(admin);
+        pool.setMerkleRoot(bytes32(uint256(1)));
+
+        vm.prank(admin);
+        vm.expectRevert("Merkle root already set");
+        pool.setMerkleRoot(bytes32(uint256(2)));
+    }
+
+    function test_setMerkleRoot_revert_zeroRoot() public {
+        _setupPoolForMerkleRoot();
+
+        vm.prank(admin);
+        vm.expectRevert("Invalid root");
+        pool.setMerkleRoot(bytes32(0));
+    }
+
+    function test_setMerkleRoot_revert_notEnoughEntries() public {
+        bytes32[] memory picks = _createPicks();
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 10_000e6);
+        pool.enter(picks, 145);
+        vm.stopPrank();
+
+        vm.warp(lockTime + 1);
+
+        vm.prank(admin);
+        pool.setResults(_createPicks());
+
+        vm.prank(admin);
+        vm.expectRevert("Not enough entries");
+        pool.setMerkleRoot(bytes32(uint256(1)));
+    }
 }

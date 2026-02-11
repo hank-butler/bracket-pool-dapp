@@ -152,4 +152,22 @@ contract BracketPool is ReentrancyGuard {
         gameResults = results;
         emit ResultsPosted(results);
     }
+
+    // --- Merkle Root ---
+
+    function setMerkleRoot(bytes32 root) external nonReentrant {
+        require(msg.sender == admin, "Not authorized");
+        require(gameResults.length == gameCount, "Results not posted");
+        require(merkleRoot == bytes32(0), "Merkle root already set");
+        require(root != bytes32(0), "Invalid root");
+        require(entryCount >= MIN_ENTRIES, "Not enough entries");
+
+        uint256 fee = totalPoolValue * FEE_PERCENT / BASIS_POINTS;
+        usdc.safeTransfer(treasury, fee);
+
+        merkleRoot = root;
+
+        emit FeePaid(treasury, fee);
+        emit MerkleRootSet(root);
+    }
 }
