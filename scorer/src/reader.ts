@@ -1,4 +1,4 @@
-import { createPublicClient, http, parseAbiItem, type Address, type PublicClient } from 'viem';
+import { createPublicClient, http, parseAbiItem, type Address } from 'viem';
 import { sepolia, mainnet } from 'viem/chains';
 import type { RawEntry } from './types';
 
