@@ -1,9 +1,9 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { sepolia, mainnet } from 'wagmi/chains';
+import { sepolia, mainnet, foundry } from 'wagmi/chains';
 
 export const config = getDefaultConfig({
   appName: 'Bracket Pool',
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'PLACEHOLDER',
-  chains: [sepolia, mainnet],
+  chains: [foundry, sepolia, mainnet],
   ssr: true,
 });
