@@ -513,4 +513,182 @@ contract BracketPoolTest is Test {
         vm.expectRevert("Claim period ended");
         pool.claim(0, prize, proof);
     }
+
+    // --- cancelPool() ---
+
+    function test_cancelPool_success() public {
+        vm.prank(admin);
+        pool.cancelPool();
+        assertTrue(pool.cancelled());
+    }
+
+    function test_cancelPool_revert_notAdmin() public {
+        vm.prank(user1);
+        vm.expectRevert("Not authorized");
+        pool.cancelPool();
+    }
+
+    function test_cancelPool_revert_alreadyFinalized() public {
+        _setupPoolForMerkleRoot();
+        vm.prank(admin);
+        pool.setMerkleRoot(bytes32(uint256(1)));
+
+        vm.prank(admin);
+        vm.expectRevert("Already finalized");
+        pool.cancelPool();
+    }
+
+    // --- refund() ---
+
+    function test_refund_afterCancel() public {
+        bytes32[] memory picks = _createPicks();
+        uint256 price = pool.getCurrentPrice();
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), price);
+        pool.enter(picks, 145);
+        vm.stopPrank();
+
+        uint256 balBefore = usdc.balanceOf(user1);
+
+        vm.prank(admin);
+        pool.cancelPool();
+
+        vm.prank(user1);
+        pool.refund(0);
+
+        assertEq(usdc.balanceOf(user1), balBefore + price);
+        assertTrue(pool.entryRefunded(0));
+    }
+
+    function test_refund_notEnoughEntries() public {
+        bytes32[] memory picks = _createPicks();
+        uint256 price = pool.getCurrentPrice();
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), price);
+        pool.enter(picks, 145);
+        vm.stopPrank();
+
+        uint256 balBefore = usdc.balanceOf(user1);
+        vm.warp(lockTime + 1);
+
+        vm.prank(user1);
+        pool.refund(0);
+
+        assertEq(usdc.balanceOf(user1), balBefore + price);
+    }
+
+    function test_refund_afterFinalizeDeadline() public {
+        bytes32[] memory picks = _createPicks();
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 10_000e6);
+        pool.enter(picks, 145);
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        usdc.approve(address(pool), 10_000e6);
+        pool.enter(picks, 150);
+        vm.stopPrank();
+
+        vm.warp(finalizeDeadline + 1);
+
+        uint256 balBefore = usdc.balanceOf(user1);
+        (, , , uint256 pricePaid) = pool.entries(0);
+
+        vm.prank(user1);
+        pool.refund(0);
+
+        assertEq(usdc.balanceOf(user1), balBefore + pricePaid);
+    }
+
+    function test_refund_revert_notOwner() public {
+        bytes32[] memory picks = _createPicks();
+        vm.startPrank(user1);
+        usdc.approve(address(pool), pool.getCurrentPrice());
+        pool.enter(picks, 145);
+        vm.stopPrank();
+
+        vm.prank(admin);
+        pool.cancelPool();
+
+        vm.prank(user2);
+        vm.expectRevert("Not entry owner");
+        pool.refund(0);
+    }
+
+    function test_refund_revert_doubleRefund() public {
+        bytes32[] memory picks = _createPicks();
+        vm.startPrank(user1);
+        usdc.approve(address(pool), pool.getCurrentPrice());
+        pool.enter(picks, 145);
+        vm.stopPrank();
+
+        vm.prank(admin);
+        pool.cancelPool();
+
+        vm.prank(user1);
+        pool.refund(0);
+
+        vm.prank(user1);
+        vm.expectRevert("Already refunded");
+        pool.refund(0);
+    }
+
+    function test_refund_revert_alreadyClaimed() public {
+        _setupPoolForMerkleRoot();
+        uint256 poolValue = pool.totalPoolValue();
+        uint256 fee = poolValue * 500 / 10000;
+        uint256 prize = (poolValue - fee) / 2;
+
+        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(user1, 0, prize, user2, 1, prize);
+
+        vm.prank(admin);
+        pool.setMerkleRoot(root);
+
+        vm.prank(user1);
+        pool.claim(0, prize, proof);
+
+        vm.prank(user1);
+        vm.expectRevert("Already claimed");
+        pool.refund(0);
+    }
+
+    function test_refund_revert_noConditionMet() public {
+        bytes32[] memory picks = _createPicks();
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 10_000e6);
+        pool.enter(picks, 145);
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        usdc.approve(address(pool), 10_000e6);
+        pool.enter(picks, 150);
+        vm.stopPrank();
+
+        vm.prank(user1);
+        vm.expectRevert("Refund not available");
+        pool.refund(0);
+    }
+
+    function test_refund_accountingBalance() public {
+        bytes32[] memory picks = _createPicks();
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 10_000e6);
+        pool.enter(picks, 145);
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        usdc.approve(address(pool), 10_000e6);
+        pool.enter(picks, 150);
+        vm.stopPrank();
+
+        (, , , uint256 price1) = pool.entries(0);
+        (, , , uint256 price2) = pool.entries(1);
+        assertEq(price1 + price2, pool.totalPoolValue());
+        assertEq(usdc.balanceOf(address(pool)), pool.totalPoolValue());
+    }
 }

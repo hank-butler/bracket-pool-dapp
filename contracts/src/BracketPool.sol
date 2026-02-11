@@ -188,4 +188,22 @@ contract BracketPool is ReentrancyGuard {
 
         emit PrizeClaimed(entryId, msg.sender, amount);
     }
+
+    // --- Refund ---
+
+    function refund(uint256 entryId) external nonReentrant {
+        require(entries[entryId].owner == msg.sender, "Not entry owner");
+        require(!entryRefunded[entryId], "Already refunded");
+        require(!entryClaimed[entryId], "Already claimed");
+
+        bool canRefund = cancelled
+            || (block.timestamp >= lockTime && entryCount < MIN_ENTRIES)
+            || (block.timestamp >= finalizeDeadline && merkleRoot == bytes32(0));
+        require(canRefund, "Refund not available");
+
+        entryRefunded[entryId] = true;
+        usdc.safeTransfer(msg.sender, entries[entryId].pricePaid);
+
+        emit EntryRefunded(entryId, msg.sender, entries[entryId].pricePaid);
+    }
 }
