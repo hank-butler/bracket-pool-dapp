@@ -170,4 +170,22 @@ contract BracketPool is ReentrancyGuard {
         emit FeePaid(treasury, fee);
         emit MerkleRootSet(root);
     }
+
+    // --- Claim ---
+
+    function claim(uint256 entryId, uint256 amount, bytes32[] calldata proof) external nonReentrant {
+        require(merkleRoot != bytes32(0), "Not finalized");
+        require(block.timestamp < claimDeadline, "Claim period ended");
+        require(!entryClaimed[entryId], "Already claimed");
+        require(!entryRefunded[entryId], "Entry was refunded");
+        require(entries[entryId].owner == msg.sender, "Not entry owner");
+
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender, entryId, amount))));
+        require(MerkleProof.verify(proof, merkleRoot, leaf), "Invalid proof");
+
+        entryClaimed[entryId] = true;
+        usdc.safeTransfer(msg.sender, amount);
+
+        emit PrizeClaimed(entryId, msg.sender, amount);
+    }
 }

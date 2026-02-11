@@ -394,4 +394,123 @@ contract BracketPoolTest is Test {
         vm.expectRevert("Not enough entries");
         pool.setMerkleRoot(bytes32(uint256(1)));
     }
+
+    // --- claim() ---
+
+    function _buildMerkleTree(
+        address owner1, uint256 entryId1, uint256 amount1,
+        address owner2, uint256 entryId2, uint256 amount2
+    ) internal pure returns (bytes32 root, bytes32[] memory proof1) {
+        bytes32 leaf1 = keccak256(bytes.concat(keccak256(abi.encode(owner1, entryId1, amount1))));
+        bytes32 leaf2 = keccak256(bytes.concat(keccak256(abi.encode(owner2, entryId2, amount2))));
+
+        proof1 = new bytes32[](1);
+        if (leaf1 <= leaf2) {
+            root = keccak256(abi.encodePacked(leaf1, leaf2));
+            proof1[0] = leaf2;
+        } else {
+            root = keccak256(abi.encodePacked(leaf2, leaf1));
+            proof1[0] = leaf2;
+        }
+    }
+
+    function test_claim_success() public {
+        _setupPoolForMerkleRoot();
+        uint256 poolValue = pool.totalPoolValue();
+        uint256 fee = poolValue * 500 / 10000;
+        uint256 prizePool = poolValue - fee;
+        uint256 prize1 = prizePool / 2;
+        uint256 prize2 = prizePool - prize1;
+
+        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(user1, 0, prize1, user2, 1, prize2);
+
+        vm.prank(admin);
+        pool.setMerkleRoot(root);
+
+        uint256 balBefore = usdc.balanceOf(user1);
+        vm.prank(user1);
+        pool.claim(0, prize1, proof);
+
+        assertEq(usdc.balanceOf(user1), balBefore + prize1);
+        assertTrue(pool.entryClaimed(0));
+    }
+
+    function test_claim_revert_invalidProof() public {
+        _setupPoolForMerkleRoot();
+        uint256 poolValue = pool.totalPoolValue();
+        uint256 fee = poolValue * 500 / 10000;
+        uint256 prizePool = poolValue - fee;
+
+        (bytes32 root, ) = _buildMerkleTree(user1, 0, prizePool / 2, user2, 1, prizePool / 2);
+
+        vm.prank(admin);
+        pool.setMerkleRoot(root);
+
+        bytes32[] memory badProof = new bytes32[](1);
+        badProof[0] = bytes32(uint256(999));
+
+        vm.prank(user1);
+        vm.expectRevert("Invalid proof");
+        pool.claim(0, prizePool / 2, badProof);
+    }
+
+    function test_claim_revert_doubleClaim() public {
+        _setupPoolForMerkleRoot();
+        uint256 poolValue = pool.totalPoolValue();
+        uint256 fee = poolValue * 500 / 10000;
+        uint256 prize = (poolValue - fee) / 2;
+
+        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(user1, 0, prize, user2, 1, prize);
+
+        vm.prank(admin);
+        pool.setMerkleRoot(root);
+
+        vm.prank(user1);
+        pool.claim(0, prize, proof);
+
+        vm.prank(user1);
+        vm.expectRevert("Already claimed");
+        pool.claim(0, prize, proof);
+    }
+
+    function test_claim_revert_notOwner() public {
+        _setupPoolForMerkleRoot();
+        uint256 poolValue = pool.totalPoolValue();
+        uint256 fee = poolValue * 500 / 10000;
+        uint256 prize = (poolValue - fee) / 2;
+
+        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(user1, 0, prize, user2, 1, prize);
+
+        vm.prank(admin);
+        pool.setMerkleRoot(root);
+
+        vm.prank(user2);
+        vm.expectRevert("Not entry owner");
+        pool.claim(0, prize, proof);
+    }
+
+    function test_claim_revert_noMerkleRoot() public {
+        bytes32[] memory proof = new bytes32[](1);
+        vm.prank(user1);
+        vm.expectRevert("Not finalized");
+        pool.claim(0, 100, proof);
+    }
+
+    function test_claim_revert_afterDeadline() public {
+        _setupPoolForMerkleRoot();
+        uint256 poolValue = pool.totalPoolValue();
+        uint256 fee = poolValue * 500 / 10000;
+        uint256 prize = (poolValue - fee) / 2;
+
+        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(user1, 0, prize, user2, 1, prize);
+
+        vm.prank(admin);
+        pool.setMerkleRoot(root);
+
+        vm.warp(pool.claimDeadline() + 1);
+
+        vm.prank(user1);
+        vm.expectRevert("Claim period ended");
+        pool.claim(0, prize, proof);
+    }
 }
