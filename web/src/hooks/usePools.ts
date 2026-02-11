@@ -1,41 +1,37 @@
+import { useState, useEffect } from 'react';
 import { useReadContract, useReadContracts } from 'wagmi';
 import { contracts, FACTORY_ADDRESS, BracketPoolABI } from '@/lib/contracts';
 
+const ZERO_MERKLE_ROOT = '0x' + '0'.repeat(64);
+
 export function usePools() {
-  const { data: poolCount } = useReadContract({
+  const { data: pools, isLoading } = useReadContract({
     address: FACTORY_ADDRESS,
     abi: contracts.factory.abi,
-    functionName: 'getPoolCount',
+    functionName: 'getAllPools',
   });
 
-  const poolQueries = useReadContracts({
-    contracts: Array.from({ length: Number(poolCount || 0) }, (_, i) => ({
-      address: FACTORY_ADDRESS,
-      abi: contracts.factory.abi as any,
-      functionName: 'pools' as const,
-      args: [BigInt(i)],
-    })),
-  });
+  const poolAddresses = (pools as `0x${string}`[] | undefined) ?? [];
 
   return {
-    poolCount: Number(poolCount || 0),
-    poolAddresses: poolQueries.data?.map(d => d.result as `0x${string}`) || [],
-    isLoading: poolQueries.isLoading,
+    poolCount: poolAddresses.length,
+    poolAddresses,
+    isLoading,
   };
 }
 
 export function usePoolDetails(address: `0x${string}`) {
   const results = useReadContracts({
     contracts: [
-      { address, abi: BracketPoolABI as any, functionName: 'poolName' },
-      { address, abi: BracketPoolABI as any, functionName: 'gameCount' },
-      { address, abi: BracketPoolABI as any, functionName: 'lockTime' },
-      { address, abi: BracketPoolABI as any, functionName: 'totalPoolValue' },
-      { address, abi: BracketPoolABI as any, functionName: 'entryCount' },
-      { address, abi: BracketPoolABI as any, functionName: 'getCurrentPrice' },
-      { address, abi: BracketPoolABI as any, functionName: 'merkleRoot' },
-      { address, abi: BracketPoolABI as any, functionName: 'cancelled' },
-      { address, abi: BracketPoolABI as any, functionName: 'claimDeadline' },
+      { address, abi: BracketPoolABI, functionName: 'poolName' },
+      { address, abi: BracketPoolABI, functionName: 'gameCount' },
+      { address, abi: BracketPoolABI, functionName: 'lockTime' },
+      { address, abi: BracketPoolABI, functionName: 'totalPoolValue' },
+      { address, abi: BracketPoolABI, functionName: 'entryCount' },
+      { address, abi: BracketPoolABI, functionName: 'getCurrentPrice' },
+      { address, abi: BracketPoolABI, functionName: 'merkleRoot' },
+      { address, abi: BracketPoolABI, functionName: 'cancelled' },
+      { address, abi: BracketPoolABI, functionName: 'claimDeadline' },
     ],
   });
 
@@ -45,12 +41,28 @@ export function usePoolDetails(address: `0x${string}`) {
     poolName: (d[0]?.result as string) || '',
     gameCount: Number(d[1]?.result || 0),
     lockTime: Number(d[2]?.result || 0),
-    totalPoolValue: BigInt((d[3]?.result || 0).toString()),
+    totalPoolValue: (d[3]?.result as bigint) ?? BigInt(0),
     entryCount: Number(d[4]?.result || 0),
-    currentPrice: BigInt((d[5]?.result || 0).toString()),
-    merkleRoot: (d[6]?.result as string) || '0x' + '0'.repeat(64),
+    currentPrice: (d[5]?.result as bigint) ?? BigInt(0),
+    merkleRoot: (d[6]?.result as string) || ZERO_MERKLE_ROOT,
     cancelled: Boolean(d[7]?.result),
     claimDeadline: Number(d[8]?.result || 0),
     isLoading: results.isLoading,
   };
+}
+
+export function usePoolStatus(pool: ReturnType<typeof usePoolDetails>) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const isLocked = now / 1000 > pool.lockTime;
+  const isFinalized = pool.merkleRoot !== ZERO_MERKLE_ROOT;
+
+  const status = pool.cancelled ? 'Cancelled' : isFinalized ? 'Finalized' : isLocked ? 'Locked' : 'Open';
+  const statusColor = pool.cancelled ? 'bg-red-200' : isFinalized ? 'bg-gray-200' : isLocked ? 'bg-yellow-200' : 'bg-green-200';
+
+  return { isLocked, isFinalized, status, statusColor };
 }

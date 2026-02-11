@@ -2,17 +2,27 @@
 
 import { use } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { usePoolDetails } from '@/hooks/usePools';
-import { formatUnits } from 'viem';
+import { usePoolDetails, usePoolStatus } from '@/hooks/usePools';
+import { formatUnits, isAddress } from 'viem';
 import Link from 'next/link';
 
 export default function PoolPage({ params }: { params: Promise<{ address: string }> }) {
   const { address } = use(params);
+
+  if (!isAddress(address)) {
+    return (
+      <main className="min-h-screen p-8">
+        <div className="max-w-4xl mx-auto">
+          <p className="text-red-500">Invalid pool address</p>
+          <Link href="/" className="text-blue-500 hover:underline">Back to Pools</Link>
+        </div>
+      </main>
+    );
+  }
+
   const poolAddress = address as `0x${string}`;
   const pool = usePoolDetails(poolAddress);
-
-  const isLocked = Date.now() / 1000 > pool.lockTime;
-  const isFinalized = pool.merkleRoot !== '0x' + '0'.repeat(64);
+  const { isLocked, isFinalized, status } = usePoolStatus(pool);
 
   return (
     <main className="min-h-screen p-8">
@@ -26,7 +36,7 @@ export default function PoolPage({ params }: { params: Promise<{ address: string
         </div>
         <div className="bg-white border rounded-lg p-6 mb-6">
           <div className="grid gap-4 md:grid-cols-2">
-            <div><p className="text-gray-500">Status</p><p className="font-semibold">{pool.cancelled ? 'Cancelled' : isFinalized ? 'Finalized' : isLocked ? 'Locked' : 'Open'}</p></div>
+            <div><p className="text-gray-500">Status</p><p className="font-semibold">{status}</p></div>
             <div><p className="text-gray-500">Entries</p><p className="font-semibold">{pool.entryCount}</p></div>
             <div><p className="text-gray-500">Pool Value</p><p className="font-semibold">${formatUnits(pool.totalPoolValue, 6)} USDC</p></div>
             <div><p className="text-gray-500">Current Price</p><p className="font-semibold">${formatUnits(pool.currentPrice, 6)} USDC</p></div>

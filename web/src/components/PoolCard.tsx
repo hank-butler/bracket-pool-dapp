@@ -1,17 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { usePoolDetails } from '@/hooks/usePools';
+import { usePoolDetails, usePoolStatus } from '@/hooks/usePools';
 import { formatUnits } from 'viem';
 
 export function PoolCard({ address }: { address: `0x${string}` }) {
   const pool = usePoolDetails(address);
-
-  const isLocked = Date.now() / 1000 > pool.lockTime;
-  const isFinalized = pool.merkleRoot !== '0x' + '0'.repeat(64);
-
-  const status = pool.cancelled ? 'Cancelled' : isFinalized ? 'Finalized' : isLocked ? 'Locked' : 'Open';
-  const statusColor = pool.cancelled ? 'bg-red-200' : isFinalized ? 'bg-gray-200' : isLocked ? 'bg-yellow-200' : 'bg-green-200';
+  const { status, statusColor } = usePoolStatus(pool);
 
   return (
     <Link href={`/pool/${address}`}>
