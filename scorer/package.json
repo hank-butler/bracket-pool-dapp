@@ -1,0 +1,29 @@
+{
+  "name": "scorer",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "score": "tsx src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@openzeppelin/merkle-tree": "^1.0.8",
+    "dotenv": "^17.2.4",
+    "typescript": "^5.9.3",
+    "viem": "^2.45.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "tsx": "^4.21.0",
+    "vitest": "^4.0.18"
+  }
+}
