@@ -28,7 +28,7 @@ The experience is simple:
 
 4. **Watch and compete.** Track your ranking on a live leaderboard as the tournament unfolds. See how your picks compare to reality in real time.
 
-5. **Claim your winnings.** When the tournament ends, results are posted, scores are calculated, and prizes are distributed automatically. Winners claim directly from the smart contract using a Merkle proof — no middleman, no delays, no trust required.
+5. **Claim your winnings.** When the tournament ends, results are posted on-chain, scores are calculated by an open-source scorer, and the prize distribution is locked into a Merkle tree. Winners claim directly from the smart contract using a Merkle proof — no middleman, no delays, no trust required.
 
 ---
 
@@ -303,7 +303,5 @@ The core architecture is built. The contracts work. The scorer works. What's nee
 ---
 
 *For technical details, see the full documentation in the project repository:*
-- *Architecture decisions: `docs/phase-0-decisions.md`*
 - *World Cup design: `docs/plans/2025-02-10-world-cup-pivot-design.md`*
-- *Implementation plan: `docs/plans/2025-02-10-bracket-pool-implementation.md`*
 - *Future roadmap: `docs/future-ideas.md`*
