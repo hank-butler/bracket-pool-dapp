@@ -91,4 +91,20 @@ contract BracketPoolTest is Test {
         vm.expectRevert("Invalid game count");
         new BracketPool(address(usdc), treasury, admin, "Test", 0, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE);
     }
+
+    // --- getCurrentPrice ---
+
+    function test_getCurrentPrice_emptyPool() public view {
+        assertEq(pool.getCurrentPrice(), BASE_PRICE);
+    }
+
+    // --- Helpers ---
+
+    function _createPicks() internal view returns (bytes32[] memory) {
+        bytes32[] memory picks = new bytes32[](GAME_COUNT);
+        for (uint256 i = 0; i < GAME_COUNT; i++) {
+            picks[i] = bytes32(uint256(i + 1));
+        }
+        return picks;
+    }
 }

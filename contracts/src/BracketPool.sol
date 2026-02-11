@@ -90,4 +90,18 @@ contract BracketPool is ReentrancyGuard {
         basePrice = _basePrice;
         priceSlope = _priceSlope;
     }
+
+    // --- View Functions ---
+
+    function getCurrentPrice() public view returns (uint256) {
+        return basePrice + (priceSlope * totalPoolValue / BASIS_POINTS);
+    }
+
+    function getUserEntryIds(address user) external view returns (uint256[] memory) {
+        return _userEntryIds[user];
+    }
+
+    function getGameResults() external view returns (bytes32[] memory) {
+        return gameResults;
+    }
 }
