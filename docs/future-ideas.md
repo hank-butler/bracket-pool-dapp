@@ -106,7 +106,62 @@ These may require new contract patterns beyond the current bracket pool:
 
 ---
 
-## 5. Summary of Contract Architecture Impact
+## 5. Decentralization: Chainlink CRE & Removing Admin Trust
+
+**Problem:** Right now the admin multisig posts game results (`setResults()`) and the Merkle root (`setMerkleRoot()`). Users have to trust that the admin posted correct results and ran the scorer honestly. This is the biggest centralization risk in the protocol — a malicious or compromised admin could post wrong results and steal the prize pool.
+
+**Goal:** Remove the admin as a single point of trust for result posting and scoring. Users should be able to verify that results came from an independent, decentralized source.
+
+### Phase 1: Chainlink CRE for Result Posting
+
+**Chainlink Compute Runtime Environment (CRE)** can fetch sports results from external APIs (ESPN, SportsDataIO, etc.), reach consensus across a Decentralized Oracle Network (DON), and post the verified results on-chain.
+
+**How it works:**
+- A CRE workflow is configured to fetch game results from multiple sports data providers
+- The DON nodes independently fetch results, compare, and reach consensus
+- Once consensus is reached, the workflow calls `setResults()` on the pool contract
+- The contract accepts results from an authorized `oracle` address (the CRE DON) instead of (or in addition to) the admin
+
+**Contract changes:**
+- Add `address public oracle` role alongside `admin`
+- `setResults()` accepts calls from either `admin` or `oracle`
+- Consider: `setResults()` only callable by `oracle` once the oracle is set, with admin as fallback if oracle fails to post within a deadline
+
+**Status:** Chainlink CRE is in Early Access (launched Nov 2025). API availability and pricing may change. The contract architecture already separates `setResults()` from `setMerkleRoot()`, which was designed with this upgrade path in mind.
+
+### Phase 2: Decentralized Scoring
+
+Even with Chainlink posting results, the scorer is still run off-chain by the admin. The admin computes the Merkle root and posts it. A dishonest admin could compute a wrong Merkle root that awards prizes to the wrong people.
+
+**Approaches to decentralize scoring:**
+
+1. **Verifiable scoring via CRE** — The CRE workflow not only fetches results but also runs the scoring logic, builds the Merkle tree, and posts the root. The entire pipeline (results → scores → rankings → prizes → Merkle root) runs in the DON, removing the admin from the scoring path entirely. This is the cleanest solution but depends on CRE supporting the compute complexity.
+
+2. **On-chain scoring (partial)** — Move the scoring logic on-chain. After `setResults()`, anyone can call a `computeScores()` function that iterates entries and computes scores. Problem: gas limits. With many entries, this is prohibitively expensive on L1. Could work on L2 or with batched computation.
+
+3. **Optimistic scoring with disputes** — Admin posts the Merkle root with a challenge period (e.g., 48 hours). During the challenge period, anyone can submit a fraud proof showing the root is incorrect. If a valid challenge is submitted, the root is rejected and can be resubmitted. This is similar to optimistic rollup mechanics.
+
+4. **Multi-party scoring** — Multiple independent parties run the scorer. The contract requires N-of-M matching Merkle roots before accepting. If they all agree, the root is valid. If they disagree, fall back to a dispute resolution process.
+
+**Recommended path:**
+- **Short term (World Cup launch):** Admin multisig posts results and Merkle root. Scorer output is pinned to IPFS and fully auditable — anyone can re-run the scorer and verify the root matches.
+- **Medium term:** Add Chainlink CRE oracle for `setResults()` to remove admin from result posting. Admin still runs scorer and posts Merkle root.
+- **Long term:** Move scoring into CRE or implement optimistic scoring with disputes. Fully trustless end-to-end.
+
+### Impact on Contract Architecture
+
+| Change | When | Difficulty |
+|--------|------|------------|
+| Add `oracle` role for `setResults()` | Medium term | Small — one new address, one require change |
+| CRE workflow for result posting | Medium term | Medium — CRE config, sports API integration |
+| Optimistic Merkle root with challenge period | Long term | Large — new contract logic for disputes, bonds, challenge windows |
+| Full CRE scoring pipeline | Long term | Large — depends on CRE compute capabilities |
+
+The current architecture was designed for this upgrade path. The separation of `setResults()` (data input) and `setMerkleRoot()` (scored output) means each can be decentralized independently.
+
+---
+
+## 6. Summary of Contract Architecture Impact
 
 | Feature | Contract Changes Needed |
 |---------|------------------------|
@@ -119,5 +174,8 @@ These may require new contract patterns beyond the current bracket pool:
 | Super Bowl Squares | New contract (different game mechanic) |
 | Survivor pools | New contract (weekly sequential picks) |
 | Season-long predictions | Possibly new contract or multi-phase result posting |
+| Chainlink CRE oracle for results | Add `oracle` role, modify `setResults()` auth |
+| Optimistic scoring (disputes) | New challenge/dispute logic on `setMerkleRoot()` |
+| Full CRE scoring pipeline | CRE runs scorer + posts root, minimal contract change |
 
-The core BracketPool contract handles the majority of sports with zero changes. Private pools and the token are the main contract additions.
+The core BracketPool contract handles the majority of sports with zero changes. The decentralization path (Chainlink CRE → optimistic scoring) is the most architecturally significant future work.
