@@ -289,3 +289,59 @@ No maximum entries per pool. For very large pools, the scorer must process all `
 | Entry cap | Add optional `maxEntries` to constructor |
 
 The core BracketPool contract handles the vast majority of the product vision with zero or minimal changes. The most impactful contract changes before mainnet are multi-token support (rename `usdc` → `token`) and results correction (`updateResults()`). Everything else is either a deployment decision (L2), scorer change (tiered payouts, live leaderboard), or factory usage pattern (entry tiers).
+
+---
+
+## 9. World Cup Launch Prioritization
+
+Everything below is prioritized for the **June 11, 2026 World Cup kickoff**.
+
+### Must Ship (Launch Blockers)
+
+These items are required for a credible mainnet launch. Without any one of them, the product either doesn't work, doesn't attract users, or loses them mid-tournament.
+
+| # | Item | Why It Blocks Launch | Effort | Timing |
+|---|------|---------------------|--------|--------|
+| 1 | **L2 deployment (Base)** | Gas on L1 makes the $100 Minnow tier impossible and Shark painful. Mass market requires sub-cent gas. Base aligns with credit card story (Coinbase ecosystem). | Low | Week 4 |
+| 2 | **Multi-token rename (usdc→token)** | Required for L2 deployment (different USDC addresses per chain). Clean up now before more code depends on the `usdc` naming. | Low | Week 4 |
+| 3 | **sportId parameter** | Frontend needs to know which bracket picker to render. One constructor param addition. | Low | Week 4 |
+| 4 | **Results correction (updateResults)** | One bad `setResults()` call with no fix = cancelled pool and PR disaster on launch day. Tiny change, massive risk reduction. | Low | Week 4 |
+| 5 | **Entry cap (maxEntries)** | If a pool goes viral, uncapped entries could break the scorer. Cheap insurance. | Low | Week 4 |
+| 6 | **World Cup scorer module** | Core product. Scoring, validation, encoding for the 88-pick World Cup format. | Medium | Weeks 5-8 |
+| 7 | **World Cup bracket picker UI** | Core product. Group stage tables + 3rd-place picker + knockout advancement. Most complex frontend work. | Medium-High | Weeks 5-9 |
+| 8 | **Tiered payouts (1st/2nd/3rd)** | Winner-take-all with thousands of entries is a dealbreaker. Default: 60% / 25% / 15%. Scorer-only change. | Low | Week 7 |
+| 9 | **All three entry tiers** | Minnow ($100) is essential — asking $1,000 minimum for a brand-new app is a non-starter. Need a low barrier to entry. Shark ($1K) and Whale ($10K) for serious players. Just three `createPool` calls. | Zero | Launch day |
+| 10 | **Live leaderboard** | The World Cup runs 5+ weeks. No standings = users forget the product exists. Engagement is everything. Partial scorer mode + leaderboard UI. | Medium | Weeks 9-11 |
+
+**Total contract changes (items 1-5):** `sportId` param, rename `usdc`→`token`, add `updateResults()`, add `maxEntries`. All small, all done in one sprint.
+
+### Should Ship (High Value, Launch is Viable Without)
+
+| Item | Why It's High Value | Why It Can Slip |
+|------|--------------------|-----------------|
+| **Credit card / fiat on-ramp** | Opens the product to non-crypto users — 100x the addressable market. | Complex integration (Privy, MoonPay, Coinbase Smart Wallet). Can add 2-4 weeks post-launch. Crypto-native users are enough to prove the product. |
+| **Private pools (allowlist)** | Office pools are a massive viral vector. "I made a bracket pool for our team" drives organic growth. | Requires allowlist contract change. Can launch public-only and add private pools in v2. |
+
+### Post-Launch
+
+| Item | Why It Can Wait |
+|------|-----------------|
+| Protocol token + revenue sharing | Needs legal review, tokenomics design, and audit. Don't rush tokens. Launch after product-market fit is proven. |
+| Chainlink CRE oracle | Still Early Access. Admin multisig + IPFS-auditable scorer output is sufficient for launch. Decentralize once the product has users. |
+| Additional sports (NBA, NHL, F1, NFL, CFB) | Ship after World Cup, using lessons learned. Each is just a sport module + bracket picker. |
+| Super Bowl Squares / Survivor pools | New contract patterns. Post-launch product expansion. |
+| Optimistic scoring / full decentralization | Long-term roadmap. Not expected at launch. |
+
+### Critical Path (Week-by-Week)
+
+```
+Weeks 1-3:   Finish March Madness PoC (demo-ready for raises)
+Week 4:      Contract updates — sportId, token rename, updateResults, maxEntries
+Weeks 5-6:   Shared sports config refactor + scorer modularity
+Weeks 7-9:   World Cup scorer + bracket picker + tiered payouts
+Weeks 9-11:  Live leaderboard + Base L2 deployment + testing
+Weeks 12-14: E2E testing, audit, Base mainnet deploy
+Weeks 15-17: Buffer (3 weeks before June 11 kickoff)
+```
+
+~17 weeks from now to kickoff. ~14 weeks of work with 3 weeks buffer. Tight but achievable if scope stays disciplined.
