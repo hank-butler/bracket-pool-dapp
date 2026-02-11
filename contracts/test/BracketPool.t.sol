@@ -221,4 +221,67 @@ contract BracketPoolTest is Test {
         // price = 10e6 + (100 * 10e6 / 10000) = 10e6 + 100000 = 10_100_000
         assertEq(pool.getCurrentPrice(), 10_100_000);
     }
+
+    // --- setResults() ---
+
+    function test_setResults_success() public {
+        bytes32[] memory results = _createPicks();
+        vm.warp(lockTime + 1);
+
+        vm.prank(admin);
+        pool.setResults(results);
+
+        bytes32[] memory stored = pool.getGameResults();
+        assertEq(stored.length, GAME_COUNT);
+        assertEq(stored[0], results[0]);
+        assertEq(stored[66], results[66]);
+    }
+
+    function test_setResults_emitsEvent() public {
+        bytes32[] memory results = _createPicks();
+        vm.warp(lockTime + 1);
+
+        vm.prank(admin);
+        vm.expectEmit(false, false, false, true);
+        emit BracketPool.ResultsPosted(results);
+        pool.setResults(results);
+    }
+
+    function test_setResults_revert_notAdmin() public {
+        bytes32[] memory results = _createPicks();
+        vm.warp(lockTime + 1);
+
+        vm.prank(user1);
+        vm.expectRevert("Not authorized");
+        pool.setResults(results);
+    }
+
+    function test_setResults_revert_beforeLock() public {
+        bytes32[] memory results = _createPicks();
+
+        vm.prank(admin);
+        vm.expectRevert("Pool not locked yet");
+        pool.setResults(results);
+    }
+
+    function test_setResults_revert_doubleSet() public {
+        bytes32[] memory results = _createPicks();
+        vm.warp(lockTime + 1);
+
+        vm.prank(admin);
+        pool.setResults(results);
+
+        vm.prank(admin);
+        vm.expectRevert("Results already posted");
+        pool.setResults(results);
+    }
+
+    function test_setResults_revert_wrongLength() public {
+        bytes32[] memory results = new bytes32[](10);
+        vm.warp(lockTime + 1);
+
+        vm.prank(admin);
+        vm.expectRevert("Invalid results length");
+        pool.setResults(results);
+    }
 }

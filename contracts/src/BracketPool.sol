@@ -140,4 +140,16 @@ contract BracketPool is ReentrancyGuard {
         cancelled = true;
         emit PoolCancelled();
     }
+
+    // --- Results ---
+
+    function setResults(bytes32[] calldata results) external {
+        require(msg.sender == admin, "Not authorized");
+        require(block.timestamp >= lockTime, "Pool not locked yet");
+        require(gameResults.length == 0, "Results already posted");
+        require(results.length == gameCount, "Invalid results length");
+
+        gameResults = results;
+        emit ResultsPosted(results);
+    }
 }
