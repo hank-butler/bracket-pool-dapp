@@ -107,4 +107,118 @@ contract BracketPoolTest is Test {
         }
         return picks;
     }
+
+    // --- enter() ---
+
+    function test_enter_success() public {
+        bytes32[] memory picks = _createPicks();
+        uint256 price = pool.getCurrentPrice();
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), price);
+        pool.enter(picks, 145);
+        vm.stopPrank();
+
+        assertEq(pool.entryCount(), 1);
+        assertEq(pool.totalPoolValue(), price);
+        assertEq(usdc.balanceOf(address(pool)), price);
+
+        (address owner, bytes32 picksHash, uint256 tiebreaker, uint256 pricePaid) = pool.entries(0);
+        assertEq(owner, user1);
+        assertEq(picksHash, keccak256(abi.encodePacked(picks)));
+        assertEq(tiebreaker, 145);
+        assertEq(pricePaid, price);
+
+        uint256[] memory ids = pool.getUserEntryIds(user1);
+        assertEq(ids.length, 1);
+        assertEq(ids[0], 0);
+    }
+
+    function test_enter_emitsEvent() public {
+        bytes32[] memory picks = _createPicks();
+        uint256 price = pool.getCurrentPrice();
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), price);
+
+        vm.expectEmit(true, true, false, true);
+        emit BracketPool.EntrySubmitted(0, user1, picks, 145, price);
+        pool.enter(picks, 145);
+        vm.stopPrank();
+    }
+
+    function test_enter_multipleEntries_priceIncreases() public {
+        bytes32[] memory picks = _createPicks();
+        uint256 price1 = pool.getCurrentPrice();
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 10_000e6);
+        pool.enter(picks, 145);
+
+        uint256 price2 = pool.getCurrentPrice();
+        assertGt(price2, price1);
+
+        pool.enter(picks, 150);
+        vm.stopPrank();
+
+        assertEq(pool.entryCount(), 2);
+        uint256[] memory ids = pool.getUserEntryIds(user1);
+        assertEq(ids.length, 2);
+    }
+
+    function test_enter_revert_afterLock() public {
+        bytes32[] memory picks = _createPicks();
+        vm.warp(lockTime + 1);
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 100e6);
+        vm.expectRevert("Pool is locked");
+        pool.enter(picks, 145);
+        vm.stopPrank();
+    }
+
+    function test_enter_revert_cancelled() public {
+        vm.prank(admin);
+        pool.cancelPool();
+
+        bytes32[] memory picks = _createPicks();
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 100e6);
+        vm.expectRevert("Pool is cancelled");
+        pool.enter(picks, 145);
+        vm.stopPrank();
+    }
+
+    function test_enter_revert_wrongPicksLength() public {
+        bytes32[] memory picks = new bytes32[](10);
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 100e6);
+        vm.expectRevert("Invalid picks length");
+        pool.enter(picks, 145);
+        vm.stopPrank();
+    }
+
+    function test_enter_revert_insufficientApproval() public {
+        bytes32[] memory picks = _createPicks();
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 1);
+        vm.expectRevert();
+        pool.enter(picks, 145);
+        vm.stopPrank();
+    }
+
+    function test_getCurrentPrice_afterEntry() public {
+        bytes32[] memory picks = _createPicks();
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 1000e6);
+        pool.enter(picks, 145);
+        vm.stopPrank();
+
+        // price = basePrice + (priceSlope * totalPoolValue / BASIS_POINTS)
+        // price = 10e6 + (100 * 10e6 / 10000) = 10e6 + 100000 = 10_100_000
+        assertEq(pool.getCurrentPrice(), 10_100_000);
+    }
 }

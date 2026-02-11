@@ -104,4 +104,40 @@ contract BracketPool is ReentrancyGuard {
     function getGameResults() external view returns (bytes32[] memory) {
         return gameResults;
     }
+
+    // --- Entry ---
+
+    function enter(bytes32[] calldata picks, uint256 tiebreaker) external nonReentrant {
+        require(block.timestamp < lockTime, "Pool is locked");
+        require(!cancelled, "Pool is cancelled");
+        require(picks.length == gameCount, "Invalid picks length");
+
+        uint256 price = getCurrentPrice();
+        usdc.safeTransferFrom(msg.sender, address(this), price);
+
+        uint256 entryId = entryCount;
+        bytes32 picksHash = keccak256(abi.encodePacked(picks));
+
+        entries[entryId] = Entry({
+            owner: msg.sender,
+            picksHash: picksHash,
+            tiebreaker: tiebreaker,
+            pricePaid: price
+        });
+
+        _userEntryIds[msg.sender].push(entryId);
+        totalPoolValue += price;
+        entryCount++;
+
+        emit EntrySubmitted(entryId, msg.sender, picks, tiebreaker, price);
+    }
+
+    // --- Cancel ---
+
+    function cancelPool() external {
+        require(msg.sender == admin, "Not authorized");
+        require(merkleRoot == bytes32(0), "Already finalized");
+        cancelled = true;
+        emit PoolCancelled();
+    }
 }
