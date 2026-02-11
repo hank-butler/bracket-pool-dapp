@@ -792,4 +792,36 @@ contract BracketPoolTest is Test {
         vm.expectRevert("Not authorized");
         pool.sweepUnclaimed();
     }
+
+    // --- Fuzz Tests ---
+
+    function testFuzz_enter_validPicks(uint256 tiebreaker) public {
+        bytes32[] memory picks = _createPicks();
+
+        vm.startPrank(user1);
+        usdc.approve(address(pool), pool.getCurrentPrice());
+        pool.enter(picks, tiebreaker);
+        vm.stopPrank();
+
+        assertEq(pool.entryCount(), 1);
+        (, , uint256 storedTiebreaker, ) = pool.entries(0);
+        assertEq(storedTiebreaker, tiebreaker);
+    }
+
+    function testFuzz_getCurrentPrice_monotonic(uint8 numEntries) public {
+        vm.assume(numEntries > 0 && numEntries <= 20);
+        bytes32[] memory picks = _createPicks();
+
+        uint256 lastPrice = pool.getCurrentPrice();
+        for (uint256 i = 0; i < numEntries; i++) {
+            vm.startPrank(user1);
+            usdc.approve(address(pool), pool.getCurrentPrice());
+            pool.enter(picks, 145);
+            vm.stopPrank();
+
+            uint256 newPrice = pool.getCurrentPrice();
+            assertGe(newPrice, lastPrice);
+            lastPrice = newPrice;
+        }
+    }
 }
