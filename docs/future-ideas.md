@@ -161,7 +161,110 @@ The current architecture was designed for this upgrade path. The separation of `
 
 ---
 
-## 6. Summary of Contract Architecture Impact
+## 6. Entry Tiers (Minnow / Shark / Whale)
+
+**Idea:** Offer three price tiers per tournament so casual fans and high-rollers both have a home.
+
+| Tier | Entry Fee | Target Audience |
+|------|-----------|-----------------|
+| Minnow | $100 USDC | Casual fans, first-timers. Likely L2-only due to gas economics. |
+| Shark | $1,000 USDC | Serious players, sports bettors |
+| Whale | $10,000 USDC | High-stakes, headline prize pools |
+
+**Implementation:** Three separate pools per tournament, created by the factory with different `basePrice` values. Each tier has its own prize pot and its own set of winners. Users can enter multiple tiers if they want.
+
+Example for World Cup 2026:
+```
+createPool(usdc, treasury, "World Cup 2026 - Minnow",  "worldcup2026", 88, ..., 100_000_000,  priceSlope)
+createPool(usdc, treasury, "World Cup 2026 - Shark",   "worldcup2026", 88, ..., 1_000_000_000, priceSlope)
+createPool(usdc, treasury, "World Cup 2026 - Whale",   "worldcup2026", 88, ..., 10_000_000_000, priceSlope)
+```
+
+**Contract changes:** None. The factory already supports creating multiple pools with different parameters. The frontend groups pools by sport and displays the tier.
+
+**Note:** The Minnow tier at $100 is only viable on L2 where gas costs are negligible. On L1, gas alone could approach the entry fee. This tier should be introduced when the L2 deployment is ready.
+
+---
+
+## 7. Known Limitations & Required Fixes
+
+Issues in the current architecture that need to be addressed before mainnet or as the product scales.
+
+### 7a. L1 Gas Costs (CRITICAL — Decide Before Mainnet)
+
+The entire stack currently targets Ethereum L1. An `enter()` call with 88 bytes32 values in calldata + USDC approve costs ~$15-40+ in gas at current prices, on top of the entry fee. This is acceptable for the Whale tier but prohibitive for Minnow and painful for Shark.
+
+**Decision needed:** Deploy on L2 (Base, Arbitrum, Optimism) for production. The contracts are fully compatible — it's just a deployment target and RPC config change. The sooner this is decided, the less Sepolia testnet work gets redone.
+
+**Recommendation:** Deploy on Base. Coinbase ecosystem aligns with the credit card on-ramp story (Coinbase Smart Wallet). Gas costs are sub-cent. USDC is native on Base.
+
+### 7b. Multi-Token Support (CRITICAL — Before Mainnet)
+
+The pool is currently hardcoded to a single ERC20 token (USDC) passed in the constructor. This needs to change before mainnet for several reasons:
+
+- Different L2s have different USDC addresses (native USDC vs. bridged)
+- Users may want to pay with USDT, DAI, or other stablecoins
+- Future pools might be denominated in ETH or other tokens
+- Cross-chain deployment needs flexibility
+
+**Options:**
+1. **Accept any ERC20** — Pool constructor already takes an `_usdc` address param (poorly named). Rename to `_token` and accept any ERC20. Frontend displays the token symbol. Minimal change.
+2. **Multi-token per pool** — Accept multiple tokens at current exchange rates. More complex, needs a price oracle. Probably overkill for now.
+3. **Native ETH support** — Accept ETH directly, wrap to WETH internally. Different code path in `enter()` and `refund()`.
+
+**Recommendation:** Option 1 for now. Rename `usdc` → `token` throughout, accept any ERC20 address. This is a small refactor (rename + update tests) that unlocks multi-chain and multi-token deployment. Add native ETH support later if needed.
+
+### 7c. Tiered Payouts (Before World Cup Launch)
+
+Currently `distributePrizes()` only pays rank-1 winners. Every real bracket pool pays top 3 (or more). With thousands of entries in a World Cup pool, a single winner taking the entire pot is unappealing.
+
+**Proposed default payout structure:**
+- 1st place: 60%
+- 2nd place: 25%
+- 3rd place: 15%
+
+**Implementation:** This is a scorer-only change — no contract modification needed. The scorer's `distributePrizes()` function gets a payout table instead of winner-take-all. The Merkle tree includes leaves for 1st, 2nd, and 3rd place (or more).
+
+**Possible future enhancement:** Make the payout structure configurable per pool. Store a `payoutBPS` array (e.g., `[6000, 2500, 1500]`) on-chain or as part of the pool metadata. For now, hardcode in the scorer.
+
+### 7d. Live Leaderboard (Before World Cup Launch)
+
+The current architecture is all-or-nothing: wait for the tournament to end, post all results at once, score everything. The World Cup runs 5+ weeks. Users will expect live standings as the group stage plays out.
+
+**Implementation:**
+- Scorer runs in "partial mode" against whatever results are available so far
+- Frontend polls or subscribes to a leaderboard API
+- No contract changes needed — partial scoring is purely off-chain
+- The on-chain flow (setResults → setMerkleRoot → claim) only happens at the end
+
+**Note:** For season-long formats (F1, NFL) this becomes essential, not just nice-to-have.
+
+### 7e. Results Correction
+
+`setResults()` can only be called once (checks `gameResults.length == 0`). If the admin or Chainlink oracle posts wrong results, there's no fix — the pool would need to be cancelled.
+
+**Recommendation:** Add an `updateResults()` function that allows results to be corrected before `setMerkleRoot()` is called. Once the Merkle root is set, results are final.
+
+```solidity
+function updateResults(bytes32[] calldata results) external {
+    require(msg.sender == admin, "Not authorized");
+    require(gameResults.length > 0, "No results to update");
+    require(merkleRoot == bytes32(0), "Already finalized");
+    require(results.length == gameCount, "Invalid results length");
+    gameResults = results;
+    emit ResultsUpdated(results);
+}
+```
+
+### 7f. Entry Cap
+
+No maximum entries per pool. For very large pools, the scorer must process all `EntrySubmitted` events. This could hit RPC rate limits or memory issues with tens of thousands of entries.
+
+**Recommendation:** Add optional `maxEntries` to the pool constructor (0 = unlimited). The scorer should also be optimized for batch event fetching with pagination.
+
+---
+
+## 8. Summary of Contract Architecture Impact
 
 | Feature | Contract Changes Needed |
 |---------|------------------------|
@@ -177,5 +280,12 @@ The current architecture was designed for this upgrade path. The separation of `
 | Chainlink CRE oracle for results | Add `oracle` role, modify `setResults()` auth |
 | Optimistic scoring (disputes) | New challenge/dispute logic on `setMerkleRoot()` |
 | Full CRE scoring pipeline | CRE runs scorer + posts root, minimal contract change |
+| Entry tiers (Minnow/Shark/Whale) | None — three separate pools with different `basePrice` |
+| L2 deployment | None — redeploy same contracts to L2 |
+| Multi-token support | Rename `usdc` → `token`, accept any ERC20 |
+| Tiered payouts (1st/2nd/3rd) | None — scorer-only change |
+| Live leaderboard | None — off-chain partial scoring |
+| Results correction | Add `updateResults()` function (before Merkle root is set) |
+| Entry cap | Add optional `maxEntries` to constructor |
 
-The core BracketPool contract handles the majority of sports with zero changes. The decentralization path (Chainlink CRE → optimistic scoring) is the most architecturally significant future work.
+The core BracketPool contract handles the vast majority of the product vision with zero or minimal changes. The most impactful contract changes before mainnet are multi-token support (rename `usdc` → `token`) and results correction (`updateResults()`). Everything else is either a deployment decision (L2), scorer change (tiered payouts, live leaderboard), or factory usage pattern (entry tiers).
