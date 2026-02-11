@@ -1,3 +1,5 @@
+> **SUPERSEDED:** This plan has been replaced by `2025-02-10-bracket-pool-implementation.md`. Do not use this for implementation — it targets Base L2 with on-chain scoring, which was changed to Ethereum L1 with Merkle distributor. Kept for historical reference only.
+
 # Bracket Pool DApp - MVP Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
