@@ -691,4 +691,105 @@ contract BracketPoolTest is Test {
         assertEq(price1 + price2, pool.totalPoolValue());
         assertEq(usdc.balanceOf(address(pool)), pool.totalPoolValue());
     }
+
+    // --- setProofsCID() ---
+
+    function test_setProofsCID_success() public {
+        _setupPoolForMerkleRoot();
+        vm.prank(admin);
+        pool.setMerkleRoot(bytes32(uint256(1)));
+
+        vm.prank(admin);
+        pool.setProofsCID("QmTestCID123");
+
+        assertEq(pool.proofsCID(), "QmTestCID123");
+    }
+
+    function test_setProofsCID_revert_notAdmin() public {
+        _setupPoolForMerkleRoot();
+        vm.prank(admin);
+        pool.setMerkleRoot(bytes32(uint256(1)));
+
+        vm.prank(user1);
+        vm.expectRevert("Not authorized");
+        pool.setProofsCID("QmTestCID123");
+    }
+
+    function test_setProofsCID_revert_noMerkleRoot() public {
+        vm.prank(admin);
+        vm.expectRevert("Merkle root not set");
+        pool.setProofsCID("QmTestCID123");
+    }
+
+    function test_setProofsCID_revert_alreadySet() public {
+        _setupPoolForMerkleRoot();
+        vm.prank(admin);
+        pool.setMerkleRoot(bytes32(uint256(1)));
+
+        vm.prank(admin);
+        pool.setProofsCID("QmTestCID123");
+
+        vm.prank(admin);
+        vm.expectRevert("CID already set");
+        pool.setProofsCID("QmOtherCID");
+    }
+
+    function test_setProofsCID_revert_emptyCID() public {
+        _setupPoolForMerkleRoot();
+        vm.prank(admin);
+        pool.setMerkleRoot(bytes32(uint256(1)));
+
+        vm.prank(admin);
+        vm.expectRevert("Empty CID");
+        pool.setProofsCID("");
+    }
+
+    // --- sweepUnclaimed() ---
+
+    function test_sweepUnclaimed_success() public {
+        _setupPoolForMerkleRoot();
+        vm.prank(admin);
+        pool.setMerkleRoot(bytes32(uint256(1)));
+
+        vm.warp(pool.claimDeadline() + 1);
+
+        uint256 remaining = usdc.balanceOf(address(pool));
+        uint256 treasuryBefore = usdc.balanceOf(treasury);
+
+        vm.prank(admin);
+        pool.sweepUnclaimed();
+
+        assertEq(usdc.balanceOf(address(pool)), 0);
+        assertEq(usdc.balanceOf(treasury), treasuryBefore + remaining);
+    }
+
+    function test_sweepUnclaimed_revert_beforeDeadline() public {
+        _setupPoolForMerkleRoot();
+        vm.prank(admin);
+        pool.setMerkleRoot(bytes32(uint256(1)));
+
+        vm.prank(admin);
+        vm.expectRevert("Claim period not over");
+        pool.sweepUnclaimed();
+    }
+
+    function test_sweepUnclaimed_revert_notFinalized() public {
+        vm.warp(pool.claimDeadline() + 1);
+
+        vm.prank(admin);
+        vm.expectRevert("Not finalized");
+        pool.sweepUnclaimed();
+    }
+
+    function test_sweepUnclaimed_revert_notAdmin() public {
+        _setupPoolForMerkleRoot();
+        vm.prank(admin);
+        pool.setMerkleRoot(bytes32(uint256(1)));
+
+        vm.warp(pool.claimDeadline() + 1);
+
+        vm.prank(user1);
+        vm.expectRevert("Not authorized");
+        pool.sweepUnclaimed();
+    }
 }

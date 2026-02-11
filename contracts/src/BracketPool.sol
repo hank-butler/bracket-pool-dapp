@@ -206,4 +206,30 @@ contract BracketPool is ReentrancyGuard {
 
         emit EntryRefunded(entryId, msg.sender, entries[entryId].pricePaid);
     }
+
+    // --- Proofs CID ---
+
+    function setProofsCID(string calldata cid) external {
+        require(msg.sender == admin, "Not authorized");
+        require(merkleRoot != bytes32(0), "Merkle root not set");
+        require(bytes(proofsCID).length == 0, "CID already set");
+        require(bytes(cid).length > 0, "Empty CID");
+
+        proofsCID = cid;
+        emit ProofsCIDSet(cid);
+    }
+
+    // --- Sweep ---
+
+    function sweepUnclaimed() external {
+        require(msg.sender == admin, "Not authorized");
+        require(block.timestamp >= claimDeadline, "Claim period not over");
+        require(merkleRoot != bytes32(0), "Not finalized");
+
+        uint256 balance = usdc.balanceOf(address(this));
+        require(balance > 0, "Nothing to sweep");
+
+        usdc.safeTransfer(treasury, balance);
+        emit UnclaimedSwept(treasury, balance);
+    }
 }
