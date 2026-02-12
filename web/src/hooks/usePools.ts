@@ -32,6 +32,9 @@ export function usePoolDetails(address: `0x${string}`) {
       { address, abi: BracketPoolABI, functionName: 'merkleRoot' },
       { address, abi: BracketPoolABI, functionName: 'cancelled' },
       { address, abi: BracketPoolABI, functionName: 'claimDeadline' },
+      { address, abi: BracketPoolABI, functionName: 'finalizeDeadline' },
+      { address, abi: BracketPoolABI, functionName: 'usdc' },
+      { address, abi: BracketPoolABI, functionName: 'proofsCID' },
     ],
   });
 
@@ -47,6 +50,9 @@ export function usePoolDetails(address: `0x${string}`) {
     merkleRoot: (d[6]?.result as string) || ZERO_MERKLE_ROOT,
     cancelled: Boolean(d[7]?.result),
     claimDeadline: Number(d[8]?.result || 0),
+    finalizeDeadline: Number(d[9]?.result || 0),
+    usdcAddress: (d[10]?.result as `0x${string}`) || ('0x' + '0'.repeat(40) as `0x${string}`),
+    proofsCID: (d[11]?.result as string) || '',
     isLoading: results.isLoading,
   };
 }
