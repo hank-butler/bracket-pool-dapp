@@ -4,21 +4,33 @@ import Link from 'next/link';
 import { usePoolDetails, usePoolStatus } from '@/hooks/usePools';
 import { formatUnits } from 'viem';
 
+const BADGE_CLASS: Record<string, string> = {
+  Open: 'badge-open',
+  Locked: 'badge-locked',
+  Finalized: 'badge-finalized',
+  Cancelled: 'badge-cancelled',
+};
+
 export function PoolCard({ address }: { address: `0x${string}` }) {
   const pool = usePoolDetails(address);
-  const { status, statusColor } = usePoolStatus(pool);
+  const { status } = usePoolStatus(pool);
+
+  const badgeCls = BADGE_CLASS[status] || 'badge-open';
 
   return (
     <Link href={`/pool/${address}`}>
-      <div className="border rounded-lg p-4 hover:border-blue-500 transition-colors">
+      <div className="panel-90s p-3 hover:border-[3px]">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="font-semibold">{pool.poolName || 'Bracket Pool'}</h3>
-          <span className={`px-2 py-1 rounded text-sm ${statusColor}`}>{status}</span>
+          <h3 className="font-bold">{pool.poolName || 'Bracket Pool'}</h3>
+          <span className={`px-2 py-0.5 text-[10px] font-bold ${badgeCls}`}>
+            {status}
+          </span>
         </div>
-        <div className="text-sm text-gray-600 space-y-1">
-          <p>Entries: {pool.entryCount}</p>
-          <p>Pool Value: ${formatUnits(pool.totalPoolValue, 6)}</p>
-          <p>Current Price: ${formatUnits(pool.currentPrice, 6)}</p>
+        <hr />
+        <div className="text-xs space-y-1">
+          <p>Entries: <b>{pool.entryCount}</b></p>
+          <p>Pool Value: <b>${formatUnits(pool.totalPoolValue, 6)}</b></p>
+          <p>Current Price: <b>${formatUnits(pool.currentPrice, 6)}</b></p>
           <p>Locks: {new Date(pool.lockTime * 1000).toLocaleString()}</p>
         </div>
       </div>

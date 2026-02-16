@@ -30,7 +30,6 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount 
 
   const [pendingPicks, setPendingPicks] = useState<{ picks: `0x${string}`[]; tiebreaker: number } | null>(null);
 
-  // When approval confirms, automatically submit the entry
   useEffect(() => {
     if (approveConfirmed && pendingPicks && state === 'waitingApproval') {
       submitEntry(pendingPicks.picks, pendingPicks.tiebreaker);
@@ -51,24 +50,24 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Submit Your Bracket</h2>
-        <p className="text-sm text-gray-600">
-          Entry price: <span className="font-semibold">${formatUnits(currentPrice, 6)} USDC</span>
+        <h2 className="text-lg">Submit Your Bracket</h2>
+        <p className="text-xs">
+          Entry price: <b>${formatUnits(currentPrice, 6)} USDC</b>
         </p>
       </div>
 
       {state === 'success' ? (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="font-semibold text-green-800">Entry submitted successfully!</p>
+        <div className="panel-90s p-4">
+          <p className="status-success">Entry submitted successfully!</p>
           {enterTxHash && (
-            <p className="text-sm text-green-600 mt-1">
-              Tx: <code className="text-xs">{enterTxHash}</code>
+            <p className="text-xs mt-1">
+              Tx: <code>{enterTxHash}</code>
             </p>
           )}
           <button
             type="button"
             onClick={() => { reset(); setPendingPicks(null); }}
-            className="mt-3 px-4 py-2 text-sm bg-green-100 hover:bg-green-200 rounded"
+            className="btn-90s mt-3"
           >
             Submit another entry
           </button>
@@ -82,29 +81,29 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount 
           />
 
           {isProcessing && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="font-medium text-yellow-800">
+            <div className="panel-90s p-4">
+              <p className="status-warning">
                 {state === 'approving' && 'Approve USDC spending in your wallet...'}
                 {state === 'waitingApproval' && 'Waiting for approval confirmation...'}
                 {state === 'entering' && 'Confirm entry submission in your wallet...'}
                 {state === 'waitingEntry' && 'Waiting for entry confirmation...'}
               </p>
               {approveTxHash && state === 'waitingApproval' && (
-                <p className="text-sm text-yellow-600 mt-1">
-                  Approve tx: <code className="text-xs">{approveTxHash}</code>
+                <p className="text-xs mt-1">
+                  Approve tx: <code>{approveTxHash}</code>
                 </p>
               )}
             </div>
           )}
 
           {state === 'error' && error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="font-medium text-red-800">Error</p>
-              <p className="text-sm text-red-600 mt-1">{error}</p>
+            <div className="panel-90s p-4">
+              <p className="status-error">Error</p>
+              <p className="text-xs mt-1">{error}</p>
               <button
                 type="button"
                 onClick={() => { reset(); setPendingPicks(null); }}
-                className="mt-3 px-4 py-2 text-sm bg-red-100 hover:bg-red-200 rounded"
+                className="btn-90s mt-3"
               >
                 Try again
               </button>
