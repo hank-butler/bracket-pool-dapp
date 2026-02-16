@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bracket Pool — Mock Bracket</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #d4d0c8;
+    color: #000;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1, h2, h3 { font-family: Georgia, 'Times New Roman', Times, serif; }
+  a { color: #0000FF; }
+  a:hover { color: #FF0000; }
+  code { font-family: 'Courier New', Courier, monospace; font-size: 12px; }
+
+  hr {
+    border: none;
+    border-top: 1px solid #808080;
+    border-bottom: 1px solid #ffffff;
+    margin: 12px 0;
+  }
+
+  /* ═══════ TITLE BAR ═══════ */
+  .titlebar {
+    background: linear-gradient(90deg, #000080, #1084d0);
+    color: #fff;
+    font-weight: bold;
+    font-size: 13px;
+    padding: 4px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .titlebar-left { display: flex; align-items: center; gap: 6px; }
+  .titlebar-icon {
+    width: 16px; height: 16px;
+    background: #ffa500; border: 1px solid #c07800; border-radius: 2px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #fff;
+  }
+  .titlebar-buttons { display: flex; gap: 2px; }
+  .titlebar-btn {
+    width: 16px; height: 14px; background: #d4d0c8;
+    border: 1px outset #d4d0c8; font-size: 9px; line-height: 12px;
+    text-align: center; cursor: default; color: #000;
+  }
+
+  /* ═══════ MARQUEE ═══════ */
+  .marquee-bar {
+    background: #000080; color: #ffff00; padding: 2px 0;
+    font-size: 12px; overflow: hidden;
+    border-top: 1px solid #4040a0; border-bottom: 1px solid #000040;
+  }
+
+  /* ═══════ PANELS / BUTTONS ═══════ */
+  .panel { background: #fff; border: 2px outset #d4d0c8; padding: 8px; }
+  .panel-inset { background: #fff; border: 2px inset #d4d0c8; padding: 8px; }
+  .btn {
+    background: #d4d0c8; border: 2px outset #d4d0c8;
+    padding: 4px 12px; font-family: Verdana; font-size: 12px; cursor: pointer;
+  }
+  .btn:active { border-style: inset; }
+  .btn-primary {
+    background: #000080; color: #fff; border: 2px outset #4040a0;
+    padding: 4px 12px; font-family: Verdana; font-size: 12px; cursor: pointer;
+  }
+  .btn-primary:active { border-style: inset; }
+
+  /* ═══════ TABLE ═══════ */
+  .tbl { border-collapse: collapse; width: 100%; }
+  .tbl th, .tbl td { border: 1px solid #808080; padding: 4px 8px; text-align: left; }
+  .tbl th { background: #d4d0c8; font-weight: bold; }
+  .tbl tr:nth-child(even) td { background: #f0f0f0; }
+
+  /* ═══════ STATUS BAR ═══════ */
+  .statusbar {
+    background: #d4d0c8; border-top: 2px outset #d4d0c8;
+    padding: 2px 8px; display: flex; gap: 4px; font-size: 11px; margin-top: auto;
+  }
+  .statusbar-cell {
+    background: #fff; border: 1px inset #d4d0c8; padding: 1px 8px; flex: 1;
+  }
+  .statusbar-cell:first-child { flex: 3; }
+
+  /* ═══════ HIT COUNTER ═══════ */
+  .hit-counter { text-align: center; padding: 8px; font-size: 11px; }
+  .digit {
+    background: #000; color: #00ff00;
+    font-family: 'Courier New', monospace; font-size: 14px; font-weight: bold;
+    padding: 2px 4px; border: 1px inset #333; min-width: 16px; text-align: center;
+    display: inline-block;
+  }
+
+  .star { color: #ffa500; font-size: 10px; }
+  .blink { animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ═══════ CONTENT ═══════ */
+  .content { flex: 1; padding: 12px; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+  /* ═══════ PROGRESS BAR ═══════ */
+  .progress { border: 2px inset #d4d0c8; background: #fff; height: 16px; }
+  .progress-fill { background: #000080; height: 100%; transition: width 0.3s; }
+
+  /* ═══════ BRACKET — REGION COLORS ═══════ */
+  .region-east    { --region-color: #0000cc; --region-bg: #e8e8ff; --region-line: #4444cc; }
+  .region-west    { --region-color: #cc0000; --region-bg: #ffe8e8; --region-line: #cc4444; }
+  .region-south   { --region-color: #008800; --region-bg: #e8ffe8; --region-line: #44aa44; }
+  .region-midwest { --region-color: #cc6600; --region-bg: #fff4e8; --region-line: #cc8844; }
+  .region-final   { --region-color: #800080; --region-bg: #f8e8f8; --region-line: #aa44aa; }
+
+  .region-title {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--region-color);
+    margin-bottom: 6px;
+    padding: 3px 8px;
+    background: var(--region-bg);
+    border-left: 4px solid var(--region-color);
+  }
+
+  /* ═══════ MATCHUP BOX ═══════ */
+  .matchup {
+    background: #fff;
+    border: 2px outset #d4d0c8;
+    width: 140px;
+    position: absolute;
+    font-size: 11px;
+  }
+  .team {
+    padding: 3px 5px;
+    cursor: pointer;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .team:hover { background: #e8e8e8; }
+  .team-selected { background: var(--region-color, #000080); color: #fff; }
+  .team-selected:hover { background: var(--region-color, #000080); filter: brightness(1.2); }
+  .team-tbd { color: #808080; cursor: default; }
+  .team-tbd:hover { background: transparent; }
+  .team-divider { border-top: 1px solid #808080; }
+
+  .seed {
+    font-size: 9px;
+    color: #808080;
+    min-width: 14px;
+    text-align: right;
+    margin-right: 3px;
+  }
+  .team-selected .seed { color: #aaaaff; }
+</style>
+</head>
+<body>
+
+<!-- TITLE BAR -->
+<div class="titlebar">
+  <div class="titlebar-left">
+    <div class="titlebar-icon">&#9917;</div>
+    <span>March Madness 2026 &mdash; Submit Your Bracket</span>
+  </div>
+  <div class="titlebar-buttons">
+    <div class="titlebar-btn">&#9472;</div>
+    <div class="titlebar-btn">&#9633;</div>
+    <div class="titlebar-btn">&#10005;</div>
+  </div>
+</div>
+
+<!-- MARQUEE -->
+<div class="marquee-bar">
+  <marquee scrollamount="3">
+    &#9733; Pick your winners! &#9733; 67 games to pick &#9733; Entry: $10 USDC &#9733; Pool locks March 20, 2026 at noon &#9733;
+  </marquee>
+</div>
+
+<div class="content">
+
+  <!-- HEADER -->
+  <div class="panel" style="padding: 12px; margin-bottom: 12px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <a href="mock-home.html">&larr; Back to Pools</a>
+        <h1 style="font-size: 20px; margin-top: 4px;">
+          <span class="star">&#9733;</span> March Madness 2026
+        </h1>
+      </div>
+      <button class="btn" style="font-size: 11px;">
+        <code>0xf39F...2266</code>
+      </button>
+    </div>
+  </div>
+
+  <!-- POOL INFO TABLE -->
+  <div class="panel" style="margin-bottom: 12px;">
+    <h2 style="font-size: 15px; margin-bottom: 6px;">Pool Information</h2>
+    <table class="tbl">
+      <tr><th>Status</th><td><b style="color: #008000;">Open</b></td></tr>
+      <tr><th>Entries</th><td>14</td></tr>
+      <tr><th>Pool Value</th><td>$140.00 USDC</td></tr>
+      <tr><th>Current Price</th><td>$10.00 USDC</td></tr>
+      <tr><th>Lock Time</th><td>3/20/2026, 12:00:00 PM</td></tr>
+      <tr><th>Claim Deadline</th><td>4/15/2026, 12:00:00 PM</td></tr>
+    </table>
+  </div>
+
+  <hr>
+
+  <!-- BRACKET SECTION -->
+  <div class="panel" style="margin-bottom: 12px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <h2 style="font-size: 15px;"><span class="star">&#9733;</span> Submit Your Bracket</h2>
+      <span style="font-size: 11px;">Entry price: <b>$10.00 USDC</b></span>
+    </div>
+
+    <!-- Progress -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+      <span style="font-size: 11px;">Progress: <b>24</b>/67 games picked</span>
+      <button class="btn" style="font-size: 11px;">Randomize</button>
+    </div>
+    <div class="progress" style="margin-bottom: 16px;">
+      <div class="progress-fill" style="width: 36%;"></div>
+    </div>
+
+    <!-- FIRST FOUR -->
+    <div class="region-final" style="margin-bottom: 16px;">
+      <div class="region-title">First Four</div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <!-- Play-in 1 -->
+        <div style="position: relative; width: 140px;">
+          <div class="matchup" style="position: relative;">
+            <div class="team team-selected"><span class="seed" style="color: #aaaaff;">16</span> <span>First Four 1</span> <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">16</span> <span>East 16</span></div>
+          </div>
+        </div>
+        <!-- Play-in 2 -->
+        <div style="position: relative; width: 140px;">
+          <div class="matchup" style="position: relative;">
+            <div class="team"><span class="seed">16</span> <span>First Four 2</span></div>
+            <div class="team team-divider team-selected"><span class="seed" style="color: #aaaaff;">16</span> <span>West 16</span> <span>&#9679;</span></div>
+          </div>
+        </div>
+        <!-- Play-in 3 -->
+        <div style="position: relative; width: 140px;">
+          <div class="matchup" style="position: relative;">
+            <div class="team team-tbd"><span class="seed">16</span> <span>TBD</span></div>
+            <div class="team team-divider team-tbd"><span class="seed">16</span> <span>TBD</span></div>
+          </div>
+        </div>
+        <!-- Play-in 4 -->
+        <div style="position: relative; width: 140px;">
+          <div class="matchup" style="position: relative;">
+            <div class="team team-tbd"><span class="seed">16</span> <span>TBD</span></div>
+            <div class="team team-divider team-tbd"><span class="seed">16</span> <span>TBD</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- EAST REGION -->
+    <div class="region-east" style="margin-bottom: 20px;">
+      <div class="region-title">&#9733; East Region</div>
+      <div style="overflow-x: auto;">
+        <div style="position: relative; width: 660px; height: 504px;">
+          <!-- SVG connectors -->
+          <svg style="position: absolute; top: 0; left: 0; width: 660px; height: 504px; pointer-events: none;">
+            <!-- R1 -> R2 connectors -->
+            <path d="M 140 30 H 152 V 60 H 164" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <path d="M 140 90 H 152 V 60 H 164" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <path d="M 140 150 H 152 V 180 H 164" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <path d="M 140 210 H 152 V 180 H 164" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <path d="M 140 270 H 152 V 300 H 164" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <path d="M 140 330 H 152 V 300 H 164" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <path d="M 140 390 H 152 V 420 H 164" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <path d="M 140 450 H 152 V 420 H 164" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <!-- R2 -> R3 connectors -->
+            <path d="M 304 60 H 316 V 120 H 328" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <path d="M 304 180 H 316 V 120 H 328" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <path d="M 304 300 H 316 V 360 H 328" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <path d="M 304 420 H 316 V 360 H 328" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <!-- R3 -> R4 connectors -->
+            <path d="M 468 120 H 480 V 240 H 492" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+            <path d="M 468 360 H 480 V 240 H 492" stroke="#4444cc" stroke-width="1.5" fill="none"/>
+          </svg>
+
+          <!-- Round 1 (R64) — 8 matchups -->
+          <div class="matchup" style="left: 0; top: 0;">
+            <div class="team team-selected"><span class="seed" style="color:#aaf;">1</span> East 1 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">16</span> First Four 1</div>
+          </div>
+          <div class="matchup" style="left: 0; top: 60px;">
+            <div class="team team-selected"><span class="seed" style="color:#aaf;">8</span> East 8 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">9</span> East 9</div>
+          </div>
+          <div class="matchup" style="left: 0; top: 120px;">
+            <div class="team"><span class="seed">5</span> East 5</div>
+            <div class="team team-divider team-selected"><span class="seed" style="color:#aaf;">12</span> East 12 <span>&#9679;</span></div>
+          </div>
+          <div class="matchup" style="left: 0; top: 180px;">
+            <div class="team team-selected"><span class="seed" style="color:#aaf;">4</span> East 4 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">13</span> East 13</div>
+          </div>
+          <div class="matchup" style="left: 0; top: 240px;">
+            <div class="team team-selected"><span class="seed" style="color:#aaf;">6</span> East 6 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">11</span> East 11</div>
+          </div>
+          <div class="matchup" style="left: 0; top: 300px;">
+            <div class="team team-selected"><span class="seed" style="color:#aaf;">3</span> East 3 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">14</span> East 14</div>
+          </div>
+          <div class="matchup" style="left: 0; top: 360px;">
+            <div class="team"><span class="seed">7</span> East 7</div>
+            <div class="team team-divider team-selected"><span class="seed" style="color:#aaf;">10</span> East 10 <span>&#9679;</span></div>
+          </div>
+          <div class="matchup" style="left: 0; top: 420px;">
+            <div class="team team-selected"><span class="seed" style="color:#aaf;">2</span> East 2 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">15</span> East 15</div>
+          </div>
+
+          <!-- Round 2 (R32) — 4 matchups -->
+          <div class="matchup" style="left: 164px; top: 30px;">
+            <div class="team team-selected"><span class="seed" style="color:#aaf;">1</span> East 1 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">8</span> East 8</div>
+          </div>
+          <div class="matchup" style="left: 164px; top: 150px;">
+            <div class="team team-selected"><span class="seed" style="color:#aaf;">12</span> East 12 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">4</span> East 4</div>
+          </div>
+          <div class="matchup" style="left: 164px; top: 270px;">
+            <div class="team team-selected"><span class="seed" style="color:#aaf;">6</span> East 6 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">3</span> East 3</div>
+          </div>
+          <div class="matchup" style="left: 164px; top: 390px;">
+            <div class="team"><span class="seed">10</span> East 10</div>
+            <div class="team team-divider team-selected"><span class="seed" style="color:#aaf;">2</span> East 2 <span>&#9679;</span></div>
+          </div>
+
+          <!-- Round 3 (S16) — 2 matchups -->
+          <div class="matchup" style="left: 328px; top: 90px;">
+            <div class="team team-selected"><span class="seed" style="color:#aaf;">1</span> East 1 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">12</span> East 12</div>
+          </div>
+          <div class="matchup" style="left: 328px; top: 330px;">
+            <div class="team"><span class="seed">6</span> East 6</div>
+            <div class="team team-divider team-selected"><span class="seed" style="color:#aaf;">2</span> East 2 <span>&#9679;</span></div>
+          </div>
+
+          <!-- Round 4 (E8) — 1 matchup -->
+          <div class="matchup" style="left: 492px; top: 210px;">
+            <div class="team team-selected"><span class="seed" style="color:#aaf;">1</span> East 1 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">2</span> East 2</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEST REGION (abbreviated — just title + first round to show color) -->
+    <div class="region-west" style="margin-bottom: 20px;">
+      <div class="region-title">&#9733; West Region</div>
+      <div style="overflow-x: auto;">
+        <div style="position: relative; width: 660px; height: 120px;">
+          <div class="matchup" style="left: 0; top: 0;">
+            <div class="team team-selected"><span class="seed" style="color:#ffaaaa;">1</span> West 1 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">16</span> West 16</div>
+          </div>
+          <div class="matchup" style="left: 0; top: 60px;">
+            <div class="team"><span class="seed">8</span> West 8</div>
+            <div class="team team-divider team-selected"><span class="seed" style="color:#ffaaaa;">9</span> West 9 <span>&#9679;</span></div>
+          </div>
+          <div class="matchup" style="left: 164px; top: 30px;">
+            <div class="team team-selected"><span class="seed" style="color:#ffaaaa;">1</span> West 1 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">9</span> West 9</div>
+          </div>
+          <svg style="position: absolute; top: 0; left: 0; width: 660px; height: 120px; pointer-events: none;">
+            <path d="M 140 26 H 152 V 56 H 164" stroke="#cc4444" stroke-width="1.5" fill="none"/>
+            <path d="M 140 86 H 152 V 56 H 164" stroke="#cc4444" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+      </div>
+      <p style="font-size: 10px; color: #808080; font-style: italic;">...more matchups below...</p>
+    </div>
+
+    <!-- SOUTH REGION (just header) -->
+    <div class="region-south" style="margin-bottom: 12px;">
+      <div class="region-title">&#9733; South Region</div>
+      <p style="font-size: 10px; color: #808080; font-style: italic; padding-left: 12px;">...bracket continues...</p>
+    </div>
+
+    <!-- MIDWEST REGION (just header) -->
+    <div class="region-midwest" style="margin-bottom: 12px;">
+      <div class="region-title">&#9733; Midwest Region</div>
+      <p style="font-size: 10px; color: #808080; font-style: italic; padding-left: 12px;">...bracket continues...</p>
+    </div>
+
+    <hr>
+
+    <!-- FINAL FOUR -->
+    <div class="region-final" style="margin-bottom: 16px;">
+      <div class="region-title">&#9733; Final Four &amp; Championship</div>
+      <div style="overflow-x: auto;">
+        <div style="position: relative; width: 340px; height: 120px;">
+          <svg style="position: absolute; top: 0; left: 0; width: 340px; height: 120px; pointer-events: none;">
+            <path d="M 140 26 H 152 V 56 H 164" stroke="#aa44aa" stroke-width="1.5" fill="none"/>
+            <path d="M 140 86 H 152 V 56 H 164" stroke="#aa44aa" stroke-width="1.5" fill="none"/>
+          </svg>
+          <div class="matchup" style="left: 0; top: 0;">
+            <div class="team team-selected"><span class="seed" style="color:#ddaadd;">E1</span> East 1 <span>&#9679;</span></div>
+            <div class="team team-divider"><span class="seed">W1</span> West 1</div>
+          </div>
+          <div class="matchup" style="left: 0; top: 60px;">
+            <div class="team team-tbd">TBD</div>
+            <div class="team team-divider team-tbd">TBD</div>
+          </div>
+          <div class="matchup" style="left: 164px; top: 30px;">
+            <div class="team"><span class="seed">E1</span> East 1</div>
+            <div class="team team-divider team-tbd">TBD</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- TIEBREAKER + SUBMIT -->
+    <div style="margin-top: 12px;">
+      <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 4px;">
+        Tiebreaker: Predicted championship total points
+      </label>
+      <input type="number" value="145" style="
+        background: #fff; border: 2px inset #d4d0c8; padding: 3px 6px;
+        font-family: Verdana; font-size: 12px; width: 100px;
+      ">
+    </div>
+    <div style="margin-top: 12px;">
+      <button class="btn-primary" style="width: 100%; padding: 8px; font-size: 13px;">
+        Submit Bracket
+      </button>
+    </div>
+  </div>
+
+  <hr>
+  <p style="font-size: 11px;">Contract: <code>0xCafac3dD18aC6c6e92c921884f9E4176737C052c</code></p>
+
+  <hr>
+
+  <!-- HIT COUNTER -->
+  <div class="hit-counter">
+    You are visitor
+    <span class="digit">0</span><span class="digit">0</span><span class="digit">3</span><span class="digit">8</span><span class="digit">4</span>
+    &nbsp;since March 2026
+  </div>
+  <p style="text-align: center; font-size: 10px; color: #808080;">
+    Best viewed with Netscape Navigator 4.0 at 1024&times;768
+    &nbsp;|&nbsp;
+    <span class="blink" style="color: #ff0000;">&#9888;</span> <b>NEW!</b> Now on Ethereum!
+  </p>
+
+</div>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <div class="statusbar-cell">&#128994; Connected: 0xf39F...2266 &mdash; Foundry Local</div>
+  <div class="statusbar-cell">Block #42</div>
+  <div class="statusbar-cell">24/67 picked</div>
+</div>
+
+</body>
+</html>

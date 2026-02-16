@@ -34,26 +34,26 @@ export function RefundEntry({
   if (refundableEntries.length === 0) return null;
 
   return (
-    <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 space-y-4">
+    <div className="panel-90s p-4 space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-orange-800">Refund Available</h2>
-        <p className="text-sm text-orange-600 mt-1">{eligibility.reason}</p>
+        <h2 className="text-lg status-warning">Refund Available</h2>
+        <p className="text-xs mt-1">{eligibility.reason}</p>
       </div>
 
       <div className="space-y-2">
         {entries.map((entry) => (
           <div
             key={entry.entryId.toString()}
-            className="flex items-center justify-between bg-white rounded p-3 border"
+            className="panel-90s-inset p-3 flex items-center justify-between"
           >
             <div>
-              <p className="font-medium">Entry #{entry.entryId.toString()}</p>
-              <p className="text-sm text-gray-600">
+              <p className="font-bold">Entry #{entry.entryId.toString()}</p>
+              <p className="text-xs">
                 Paid: ${formatUnits(entry.pricePaid, 6)} USDC
               </p>
             </div>
             {entry.isRefunded ? (
-              <span className="px-3 py-1 text-sm bg-gray-100 text-gray-500 rounded">
+              <span className="btn-90s" style={{ cursor: 'default' }}>
                 Already refunded
               </span>
             ) : (
@@ -61,7 +61,7 @@ export function RefundEntry({
                 type="button"
                 onClick={() => refund(entry.entryId)}
                 disabled={waiting || refundingId !== null}
-                className="px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded hover:bg-orange-700 disabled:opacity-50"
+                className="btn-90s-primary"
               >
                 {refundingId === entry.entryId && waiting
                   ? 'Refunding...'
@@ -75,18 +75,18 @@ export function RefundEntry({
       </div>
 
       {txHash && confirmed && (
-        <p className="text-sm text-green-600">
-          Refund confirmed! Tx: <code className="text-xs">{txHash}</code>
+        <p className="text-xs status-success">
+          Refund confirmed! Tx: <code>{txHash}</code>
         </p>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded p-3">
-          <p className="text-sm text-red-600">{error}</p>
+        <div className="panel-90s-inset p-3">
+          <p className="text-xs status-error">{error}</p>
           <button
             type="button"
             onClick={reset}
-            className="mt-2 text-sm text-red-500 underline"
+            className="text-xs underline mt-1"
           >
             Dismiss
           </button>

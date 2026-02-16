@@ -19,17 +19,17 @@ function InjectedButton() {
       <button
         type="button"
         onClick={() => disconnect()}
-        className="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg border"
+        className="btn-90s"
       >
-        {address.slice(0, 6)}...{address.slice(-4)}
+        <code>{address.slice(0, 6)}...{address.slice(-4)}</code>
       </button>
     );
   }
 
   if (connectors.length === 0) {
     return (
-      <span className="px-4 py-2 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-        No wallet detected — install MetaMask
+      <span className="panel-90s-inset p-2 text-xs status-error">
+        No wallet detected &mdash; install MetaMask
       </span>
     );
   }
@@ -41,12 +41,12 @@ function InjectedButton() {
           key={connector.uid}
           type="button"
           onClick={() => connect({ connector })}
-          className="px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
+          className="btn-90s-primary"
         >
           Connect {connector.name}
         </button>
       ))}
-      {error && <span className="text-sm text-red-500">{error.message}</span>}
+      {error && <span className="text-xs status-error">{error.message}</span>}
     </div>
   );
 }

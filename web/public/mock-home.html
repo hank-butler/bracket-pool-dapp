@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bracket Pool — Mock Home</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #d4d0c8;
+    color: #000;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1, h2, h3 { font-family: Georgia, 'Times New Roman', Times, serif; }
+  a { color: #0000FF; }
+  a:visited { color: #551A8B; }
+  a:hover { color: #FF0000; }
+  code { font-family: 'Courier New', Courier, monospace; font-size: 12px; }
+
+  hr {
+    border: none;
+    border-top: 1px solid #808080;
+    border-bottom: 1px solid #ffffff;
+    margin: 12px 0;
+  }
+
+  /* ═══════ TITLE BAR ═══════ */
+  .titlebar {
+    background: linear-gradient(90deg, #000080, #1084d0);
+    color: #fff;
+    font-weight: bold;
+    font-size: 13px;
+    padding: 4px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+  }
+  .titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .titlebar-icon {
+    width: 16px;
+    height: 16px;
+    background: #ffa500;
+    border: 1px solid #c07800;
+    border-radius: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #fff;
+  }
+  .titlebar-buttons {
+    display: flex;
+    gap: 2px;
+  }
+  .titlebar-btn {
+    width: 16px;
+    height: 14px;
+    background: #d4d0c8;
+    border: 1px outset #d4d0c8;
+    font-size: 9px;
+    line-height: 12px;
+    text-align: center;
+    cursor: default;
+    color: #000;
+  }
+  .titlebar-btn:active { border-style: inset; }
+
+  /* ═══════ MARQUEE ═══════ */
+  .marquee-bar {
+    background: #000080;
+    color: #ffff00;
+    padding: 2px 0;
+    font-size: 12px;
+    overflow: hidden;
+    border-top: 1px solid #4040a0;
+    border-bottom: 1px solid #000040;
+  }
+  .marquee-bar marquee {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+  }
+
+  /* ═══════ PANELS ═══════ */
+  .panel {
+    background: #fff;
+    border: 2px outset #d4d0c8;
+    padding: 8px;
+  }
+  .panel-inset {
+    background: #fff;
+    border: 2px inset #d4d0c8;
+    padding: 8px;
+  }
+
+  /* ═══════ BUTTONS ═══════ */
+  .btn {
+    background: #d4d0c8;
+    color: #000;
+    border: 2px outset #d4d0c8;
+    padding: 4px 12px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .btn:active { border-style: inset; }
+  .btn-primary {
+    background: #000080;
+    color: #fff;
+    border: 2px outset #4040a0;
+    padding: 4px 12px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .btn-primary:active { border-style: inset; }
+
+  /* ═══════ TABLE ═══════ */
+  .tbl { border-collapse: collapse; width: 100%; }
+  .tbl th, .tbl td { border: 1px solid #808080; padding: 4px 8px; text-align: left; }
+  .tbl th { background: #d4d0c8; font-weight: bold; }
+  .tbl tr:nth-child(even) td { background: #f0f0f0; }
+
+  /* ═══════ POOL CARD ═══════ */
+  .pool-card {
+    background: #fff;
+    border: 2px outset #d4d0c8;
+    padding: 10px;
+    cursor: pointer;
+  }
+  .pool-card:hover {
+    border-width: 3px;
+    padding: 9px;
+  }
+  .pool-card h3 { margin-bottom: 4px; }
+  .pool-card .badge {
+    border: 1px solid #808080;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    background: #e8ffe8;
+    color: #008000;
+  }
+
+  /* ═══════ STATUS BAR ═══════ */
+  .statusbar {
+    background: #d4d0c8;
+    border-top: 2px outset #d4d0c8;
+    padding: 2px 8px;
+    display: flex;
+    gap: 4px;
+    font-size: 11px;
+    margin-top: auto;
+  }
+  .statusbar-cell {
+    background: #fff;
+    border: 1px inset #d4d0c8;
+    padding: 1px 8px;
+    flex: 1;
+  }
+  .statusbar-cell:first-child { flex: 3; }
+
+  /* ═══════ HIT COUNTER ═══════ */
+  .hit-counter {
+    text-align: center;
+    padding: 8px;
+    font-size: 11px;
+  }
+  .hit-counter .digits {
+    display: inline-flex;
+    gap: 1px;
+    margin-left: 4px;
+  }
+  .hit-counter .digit {
+    background: #000;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 2px 4px;
+    border: 1px inset #333;
+    min-width: 16px;
+    text-align: center;
+  }
+
+  /* ═══════ CONTENT AREA ═══════ */
+  .content {
+    flex: 1;
+    padding: 12px;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* ═══════ STARS ═══════ */
+  .star { color: #ffa500; font-size: 10px; }
+  .blink { animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+
+<!-- TITLE BAR -->
+<div class="titlebar">
+  <div class="titlebar-left">
+    <div class="titlebar-icon">&#9917;</div>
+    <span>Bracket Pool &mdash; On-Chain March Madness</span>
+  </div>
+  <div class="titlebar-buttons">
+    <div class="titlebar-btn">&#9472;</div>
+    <div class="titlebar-btn">&#9633;</div>
+    <div class="titlebar-btn">&#10005;</div>
+  </div>
+</div>
+
+<!-- MARQUEE -->
+<div class="marquee-bar">
+  <marquee scrollamount="3">
+    &#9733; Welcome to Bracket Pool &#9733; On-chain March Madness bracket pools &#9733; Pick your winners &#9733; Powered by Ethereum &#9733; Submit your bracket today! &#9733;
+  </marquee>
+</div>
+
+<div class="content">
+
+  <!-- HEADER PANEL -->
+  <div class="panel" style="padding: 12px; margin-bottom: 12px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h1 style="font-size: 22px;">
+        <span class="star">&#9733;</span> Bracket Pools <span class="star">&#9733;</span>
+      </h1>
+      <button class="btn-primary">Connect Wallet</button>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- POOL CARDS -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+
+    <div class="pool-card">
+      <div style="display: flex; justify-content: space-between; align-items: start;">
+        <h3 style="font-size: 14px;">March Madness 2026</h3>
+        <span class="badge">Open</span>
+      </div>
+      <hr>
+      <div style="font-size: 12px; line-height: 1.6;">
+        <p>Entries: <b>14</b></p>
+        <p>Pool Value: <b>$140.00</b></p>
+        <p>Current Price: <b>$10.00</b></p>
+        <p>Locks: <b>3/20/2026, 12:00 PM</b></p>
+      </div>
+    </div>
+
+    <div class="pool-card">
+      <div style="display: flex; justify-content: space-between; align-items: start;">
+        <h3 style="font-size: 14px;">Office Bracket Challenge</h3>
+        <span class="badge" style="background: #fff0f0; color: #cc0000;">Locked</span>
+      </div>
+      <hr>
+      <div style="font-size: 12px; line-height: 1.6;">
+        <p>Entries: <b>32</b></p>
+        <p>Pool Value: <b>$640.00</b></p>
+        <p>Current Price: <b>$20.00</b></p>
+        <p>Locks: <b>3/18/2026, 6:00 PM</b></p>
+      </div>
+    </div>
+
+    <div class="pool-card">
+      <div style="display: flex; justify-content: space-between; align-items: start;">
+        <h3 style="font-size: 14px;">Degen Bracket</h3>
+        <span class="badge" style="background: #f0f0ff; color: #800080;">Finalized</span>
+      </div>
+      <hr>
+      <div style="font-size: 12px; line-height: 1.6;">
+        <p>Entries: <b>128</b></p>
+        <p>Pool Value: <b>$12,800.00</b></p>
+        <p>Current Price: <b>$100.00</b></p>
+        <p>Locks: <b>3/15/2026, 12:00 PM</b></p>
+      </div>
+    </div>
+
+  </div>
+
+  <hr>
+
+  <!-- HIT COUNTER -->
+  <div class="hit-counter">
+    You are visitor
+    <span class="digits">
+      <span class="digit">0</span>
+      <span class="digit">0</span>
+      <span class="digit">3</span>
+      <span class="digit">8</span>
+      <span class="digit">4</span>
+    </span>
+    &nbsp;since March 2026
+  </div>
+
+  <p style="text-align: center; font-size: 10px; color: #808080;">
+    Best viewed with Netscape Navigator 4.0 at 1024&times;768
+    &nbsp;|&nbsp;
+    <span class="blink" style="color: #ff0000;">&#9888;</span> <b>NEW!</b> Now on Ethereum!
+  </p>
+
+</div>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <div class="statusbar-cell">&#128994; Connected: 0xf39F...2266 &mdash; Foundry Local</div>
+  <div class="statusbar-cell">Block #42</div>
+  <div class="statusbar-cell">3 Pools</div>
+</div>
+
+</body>
+</html>
