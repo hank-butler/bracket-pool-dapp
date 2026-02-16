@@ -1,7 +1,7 @@
 'use client';
 
 import { use } from 'react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { WalletButton } from '@/components/WalletButton';
 import { useAccount } from 'wagmi';
 import { usePoolDetails, usePoolStatus } from '@/hooks/usePools';
 import { formatUnits, isAddress } from 'viem';
@@ -41,7 +41,7 @@ export default function PoolPage({ params }: { params: Promise<{ address: string
             <Link href="/" className="text-blue-500 hover:underline">&larr; Back to Pools</Link>
             <h1 className="text-3xl font-bold mt-2">{pool.poolName || 'Pool Details'}</h1>
           </div>
-          <ConnectButton />
+          <WalletButton />
         </div>
         <div className="bg-white border rounded-lg p-6 mb-6">
           <div className="grid gap-4 md:grid-cols-2">
