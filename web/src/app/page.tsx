@@ -1,6 +1,6 @@
 'use client';
 
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { WalletButton } from '@/components/WalletButton';
 import { usePools } from '@/hooks/usePools';
 import { PoolCard } from '@/components/PoolCard';
 
@@ -12,7 +12,7 @@ export default function Home() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Bracket Pools</h1>
-          <ConnectButton />
+          <WalletButton />
         </div>
         {isLoading ? (
           <p>Loading pools...</p>

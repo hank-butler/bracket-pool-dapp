@@ -1,9 +1,26 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { createConfig, http } from 'wagmi';
 import { sepolia, mainnet, foundry } from 'wagmi/chains';
+import { injected } from 'wagmi/connectors';
 
-export const config = getDefaultConfig({
-  appName: 'Bracket Pool',
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'PLACEHOLDER',
-  chains: [foundry, sepolia, mainnet],
-  ssr: true,
-});
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+
+export const hasRainbowKit = !!(projectId && projectId !== 'PLACEHOLDER');
+
+export const config = projectId && projectId !== 'PLACEHOLDER'
+  ? getDefaultConfig({
+      appName: 'Bracket Pool',
+      projectId,
+      chains: [foundry, sepolia, mainnet],
+      ssr: true,
+    })
+  : createConfig({
+      chains: [foundry, sepolia, mainnet],
+      connectors: [injected()],
+      transports: {
+        [foundry.id]: http(),
+        [sepolia.id]: http(),
+        [mainnet.id]: http(),
+      },
+      ssr: true,
+    });
