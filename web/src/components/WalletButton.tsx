@@ -40,7 +40,7 @@ function InjectedButton() {
         <button
           key={connector.uid}
           type="button"
-          onClick={() => connect({ connector })}}
+          onClick={() => connect({ connector })}
           className="px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
         >
           Connect {connector.name}
