@@ -11,7 +11,6 @@ import {
   selectWinner,
   isComplete,
   randomFill,
-  ROUND_NAMES,
 } from '@/lib/teams';
 
 // Layout constants
