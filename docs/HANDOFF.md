@@ -1,43 +1,44 @@
-# Handoff — 2026-02-16 — CL
+# Handoff — 2026-02-16 — HB
 
-> **Author:** CL | **Date:** 2026-02-16
+> **Author:** HB | **Date:** 2026-02-16
 
 ## Project Status
 
-The bracket-pool-dapp MVP is feature-complete and end-to-end tested on local Anvil. This session replaced placeholder team names with real 2025 March Madness data and simplified from a 67-game bracket to 63 games (dropping First Four play-in picks). A PR is open for review.
+The bracket-pool-dapp MVP is feature-complete and all three refund scenarios have been verified end-to-end in the browser on local Anvil. A bug was found and fixed in `DeployLocal.s.sol` (gameCount 67 → 63). Branch `feature/real-teams-2025` is pushed and ready for a PR to `main`.
 
 | Layer | Status | Tests |
 |-------|--------|-------|
 | Smart Contracts (Foundry) | Complete | 64 tests pass |
-| Off-Chain Scorer (TypeScript) | Complete | 21 tests pass |
-| Frontend (Next.js + wagmi) | Complete | Builds cleanly |
+| Off-Chain Scorer (TypeScript) | Complete | Pre-existing Node.js version issue (needs Node 16+) |
+| Frontend (Next.js + wagmi) | Complete | Pre-existing Node.js version issue (`npm run build` fails, `npm run dev` works) |
 
 ## What Was Done This Session
 
-- Replaced placeholder teams ("East 1", "West 12") with real 2025 NCAA Tournament teams (Auburn, Duke, Houston, Florida as 1-seeds) on branch `feature/real-teams-2025`
-- Simplified bracket from 67 games to 63 games — dropped First Four play-in picks entirely
-- Updated scorer index ranges and point values for 63-game layout (perfect bracket = 1,920 pts)
-- Updated BracketPicker component: removed First Four section, uses `TeamInfo.seed` for seed display instead of string parsing
-- Added `/update-teams` slash command (`.claude/commands/update-teams.md`) for future Selection Sunday updates — fetches from two sources, cross-references, gets human approval
-- Added `/handoff` slash command (`.claude/commands/handoff.md`) for session handoff tracking with author initials
-- Added `CLAUDE.md` with project context, commands, and conventions
-- Opened PR #3: https://github.com/hank-butler/bracket-pool-dapp/pull/3
+- **Verified all 3 refund scenarios** end-to-end in browser on local Anvil:
+  - Pool cancelled by admin — refund panel appeared with "Pool cancelled", refund tx succeeded
+  - Insufficient entries after lock time — refund panel appeared with "Not enough entries after lock time", refund tx succeeded
+  - Past finalize deadline, no merkle root — refund panel appeared with "Finalization deadline passed without results", refund tx succeeded
+- **Fixed `DeployLocal.s.sol`** — was creating pools with `gameCount=67` but frontend bracket structure only supports 63 games (no First Four). Changed to `gameCount=63` (commit `6548f3b`)
+- **Updated `docs/handoff-2026-02-16.md`** — marked refund testing done, corrected stale "67 games" architecture reference to "63 games"
+- **Pushed branch** `feature/real-teams-2025` to origin (12 commits ahead of `main`)
 
 ## What's Next
 
-1. **Manual browser test of real teams** — run `cd web && npm run dev`, verify bracket shows real team names with seeds, clicking advances teams, randomize fills all 63 games, Final Four and Championship render correctly
-2. **Merge PR #3** — after browser verification passes
-3. **Update `DeployLocal.s.sol`** — currently creates pool with `gameCount=67`, needs to be `63` to match the new bracket structure
-4. **Test refund flow in browser** — `RefundEntry.tsx` is built but untested in browser. Three conditions: pool cancelled, insufficient entries, past finalize deadline
+1. **Install `gh` CLI** — needed for creating PRs from the command line. Run: `sudo apt install gh` then `gh auth login`
+2. **Create PR** for `feature/real-teams-2025` → `main` — branch is pushed, PR not yet created
+3. **Merge PR #3** (if still open) and/or the new PR
+4. **Fix Node.js version** — scorer tests and frontend build require Node 16+. Current system Node is too old. Consider installing via `nvm`
 5. **Get WalletConnect project ID** — register at https://cloud.walletconnect.com, set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` in `.env.local`
-6. **Testnet deployment (Sepolia)** — deploy factory, create test pool with `gameCount=63`, full E2E test
-7. **World Cup 2026 pivot** — Phase B (add `sportId` to contracts), Phase C (shared sports config), Phase D (World Cup bracket picker UI). Design doc at `docs/plans/2025-02-10-world-cup-pivot-design.md`
+6. **UX improvements** — randomize button is easy to miss (subtle gray text), general polish pass
+7. **Testnet deployment (Sepolia)** — deploy factory with `gameCount=63`, create test pool, full E2E test
+8. **World Cup 2026 pivot** — Phase B (add `sportId` to contracts), Phase C (shared sports config), Phase D (World Cup bracket picker UI). Design doc at `docs/plans/2025-02-10-world-cup-pivot-design.md`
 
 ## Current Branch State
 
-- **Branch:** `feature/real-teams-2025` (10 commits ahead of `main`)
-- **Open PR:** https://github.com/hank-butler/bracket-pool-dapp/pull/3
-- **Uncommitted:** `scorer/output-0xcafac3dd.json` (untracked, not related to this work)
+- **Branch:** `feature/real-teams-2025` (12 commits ahead of `main`)
+- **Pushed:** Yes, up to date with `origin/feature/real-teams-2025`
+- **Open PR:** None yet (PR #3 may be stale — check status)
+- **Uncommitted:** Only untracked files (`claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/screenshots/`) — none related to this session's work
 
 ## Local Development Setup
 
@@ -45,24 +46,18 @@ Anvil state resets on restart. To get back to a working state:
 
 ```bash
 # Terminal 1 — start Anvil
-cd ~/madness-app/bracket-pool-dapp/contracts
+cd contracts
 ~/.foundry/bin/anvil
 
 # Terminal 2 — deploy contracts
-cd ~/madness-app/bracket-pool-dapp/contracts
+cd contracts
 export PATH="$HOME/.foundry/bin:$PATH"
-
-# Deploy MockUSDC
-forge create test/mocks/MockUSDC.sol:MockUSDC \
-  --rpc-url http://127.0.0.1:8545 \
-  --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
-  --broadcast
-
-# Update contracts/.env with MockUSDC address, then deploy factory
-forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+forge script script/DeployLocal.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+# Note the Factory and MockUSDC addresses from output
 
 # Terminal 3 — start frontend
-cd ~/madness-app/bracket-pool-dapp/web
+# Update web/.env.local with the factory address from deploy output
+cd web
 npm run dev
 # Open http://localhost:3000
 ```
