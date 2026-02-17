@@ -1,10 +1,10 @@
-# Handoff — 2026-02-16 — HB
+# Handoff — 2026-02-17 — HB
 
-> **Author:** HB | **Date:** 2026-02-16
+> **Author:** HB | **Date:** 2026-02-17
 
 ## Project Status
 
-The bracket-pool-dapp MVP is feature-complete and all three refund scenarios have been verified end-to-end in the browser on local Anvil. A bug was found and fixed in `DeployLocal.s.sol` (gameCount 67 → 63). Branch `feature/real-teams-2025` is pushed and ready for a PR to `main`.
+The MVP is feature-complete and has been deployed to Sepolia testnet. The factory contract is live and verified on Etherscan. Frontend is configured to point at the Sepolia deployment but has not yet been deployed to Vercel. Branch `feature/real-teams-2025` is still open — PR to `main` has not been created yet.
 
 | Layer | Status | Tests |
 |-------|--------|-------|
@@ -14,35 +14,35 @@ The bracket-pool-dapp MVP is feature-complete and all three refund scenarios hav
 
 ## What Was Done This Session
 
-- **Verified all 3 refund scenarios** end-to-end in browser on local Anvil:
-  - Pool cancelled by admin — refund panel appeared with "Pool cancelled", refund tx succeeded
-  - Insufficient entries after lock time — refund panel appeared with "Not enough entries after lock time", refund tx succeeded
-  - Past finalize deadline, no merkle root — refund panel appeared with "Finalization deadline passed without results", refund tx succeeded
-- **Fixed `DeployLocal.s.sol`** — was creating pools with `gameCount=67` but frontend bracket structure only supports 63 games (no First Four). Changed to `gameCount=63` (commit `6548f3b`)
-- **Updated `docs/handoff-2026-02-16.md`** — marked refund testing done, corrected stale "67 games" architecture reference to "63 games"
-- **Pushed branch** `feature/real-teams-2025` to origin (12 commits ahead of `main`)
+- **Completed Sepolia deployment (Task 3):**
+  - Set up Alchemy Sepolia RPC URL and added to `contracts/.env`
+  - Created new dedicated MetaMask deployer wallet (separate from Anvil dev key)
+  - Funded deployer with Sepolia ETH via Google Cloud faucet
+  - Obtained Etherscan API key and WalletConnect Project ID
+  - First deploy attempt used stale placeholder USDC address (`0x000...0001`) — caught from broadcast JSON, redeployed with correct Circle Sepolia USDC (`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`)
+  - **Factory deployed to Sepolia:** `0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd` (verified on Etherscan)
+  - Updated `web/.env.local` with new factory address and WalletConnect Project ID
+- **UI fix (prior to this session):** Randomize button visibility issue resolved — no further action needed
 
 ## What's Next
 
-1. **Install `gh` CLI** — needed for creating PRs from the command line. Run: `sudo apt install gh` then `gh auth login`
-2. **Create PR** for `feature/real-teams-2025` → `main` — branch is pushed, PR not yet created
-3. **Merge PR #3** (if still open) and/or the new PR
-4. **Fix Node.js version** — scorer tests and frontend build require Node 16+. Current system Node is too old. Consider installing via `nvm`
-5. **Get WalletConnect project ID** — register at https://cloud.walletconnect.com, set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` in `.env.local`
-6. **UX improvements** — randomize button is easy to miss (subtle gray text), general polish pass
-7. **Testnet deployment (Sepolia)** — deploy factory with `gameCount=63`, create test pool, full E2E test
-8. **World Cup 2026 pivot** — Phase B (add `sportId` to contracts), Phase C (shared sports config), Phase D (World Cup bracket picker UI). Design doc at `docs/plans/2025-02-10-world-cup-pivot-design.md`
+1. **Deploy frontend to Vercel** — repo must be pushed to GitHub first, then connect via Vercel dashboard; set env vars (`NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`, `NEXT_PUBLIC_FACTORY_ADDRESS`) in Vercel project settings
+2. **Full Sepolia E2E test** — create a test pool via the deployed frontend, submit entries, run scorer, post Merkle root, claim prize
+3. **Create PR** for `feature/real-teams-2025` → `main` — install `gh` CLI if needed (`sudo apt install gh && gh auth login`)
+4. **Fix Node.js version** — scorer tests and frontend build require Node 16+; install via `nvm`
+5. **Production readiness** — security audit/peer review, mainnet deploy, Gnosis Safe multisig for admin/treasury, verify contracts on mainnet Etherscan
+6. **World Cup 2026 pivot** — Phase B (`sportId` in contracts), Phase C (shared sports config), Phase D (World Cup bracket picker UI). Design doc: `docs/plans/2025-02-10-world-cup-pivot-design.md`
 
 ## Current Branch State
 
 - **Branch:** `feature/real-teams-2025` (12 commits ahead of `main`)
 - **Pushed:** Yes, up to date with `origin/feature/real-teams-2025`
-- **Open PR:** None yet (PR #3 may be stale — check status)
-- **Uncommitted:** Only untracked files (`claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/screenshots/`) — none related to this session's work
+- **Open PR:** None — not yet created
+- **Uncommitted:** Only untracked files (`claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/screenshots/`, `contracts/broadcast/`) — none blocking
 
 ## Local Development Setup
 
-Anvil state resets on restart. To get back to a working state:
+Anvil state resets on restart. To get back to a working state locally:
 
 ```bash
 # Terminal 1 — start Anvil
@@ -64,24 +64,32 @@ npm run dev
 
 ### MetaMask Configuration
 
-- Network: Anvil Local, RPC: `http://127.0.0.1:8545`, Chain ID: `31337`
-- Import Anvil account #0 private key: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+- **Local (Anvil):** Network RPC `http://127.0.0.1:8545`, Chain ID `31337`; import Anvil account #0 key `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+- **Sepolia:** Add Sepolia network in MetaMask; use the dedicated deployer wallet (not the Anvil key)
 - Use Chrome/Brave (Safari doesn't support wallet extensions)
 
 ### Environment Files (not tracked by git)
 
 **`contracts/.env`:**
 ```
-PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-USDC_ADDRESS=<deployed MockUSDC address>
-TREASURY_ADDRESS=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+PRIVATE_KEY=<deployer wallet private key>
+USDC_ADDRESS=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238   # Circle Sepolia USDC
+TREASURY_ADDRESS=<treasury address>
+SEPOLIA_RPC_URL=<Alchemy Sepolia HTTPS URL>
+ETHERSCAN_API_KEY=<Etherscan API key>
 ```
 
 **`web/.env.local`:**
 ```
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=PLACEHOLDER
-NEXT_PUBLIC_FACTORY_ADDRESS=<deployed factory address>
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=<WalletConnect project ID>
+NEXT_PUBLIC_FACTORY_ADDRESS=0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd
 ```
+
+### Sepolia Deployment
+
+- **Factory:** `0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd` (verified on Sepolia Etherscan)
+- **USDC:** Circle Sepolia USDC at `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` (get test tokens from Circle's faucet)
+- Deploy command: `source .env && forge script script/Deploy.s.sol --rpc-url sepolia --broadcast --verify` (from `contracts/`)
 
 ## Key Architecture Decisions
 
