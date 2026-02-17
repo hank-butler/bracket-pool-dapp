@@ -6,11 +6,38 @@ Update the NCAA tournament teams in `web/src/lib/teams.ts` for a new season.
 
 Run this when the NCAA Selection Sunday bracket is announced (mid-March) and you need to swap in real team data for the new season.
 
-## Input
+## Process
 
-The user will paste or describe the bracket — typically a list of 64 teams organized by region (South, East, Midwest, West) with seeds 1-16.
+### Step 1: Fetch bracket from primary source
 
-There are also 4 First Four play-in matchups. For each play-in, pick the expected winner or ask the user which team to use. The play-in winners fill the 4 contested seed slots (typically two 16-seeds and two 11-seeds, but the specific seeds vary by year).
+Search the web for the official NCAA tournament bracket for the current year. Good primary sources:
+- ESPN NCAA bracket page
+- CBS Sports bracket
+- NCAA.com official bracket
+
+Extract all 68 teams with their seed and region assignment. Also identify the 4 First Four play-in matchups.
+
+### Step 2: Cross-reference with a second source
+
+Fetch the bracket from a different source than Step 1 and compare. Verify:
+- All 68 team names match
+- All seed assignments match
+- All region assignments match
+- First Four matchups match
+
+If there are discrepancies between sources, flag them to the user before proceeding.
+
+### Step 3: Present to user for approval
+
+Show the user the full bracket organized by region (4 regions, 16 seeds each = 64 main bracket teams + 4 First Four matchups). Format as a table per region.
+
+For each First Four play-in, ask the user which team to slot into the main bracket. The play-in winners fill the 4 contested seed slots (typically two 16-seeds and two 11-seeds, but the specific seeds vary by year).
+
+**Do not update any code until the user explicitly approves the team list.**
+
+### Step 4: Update the code
+
+After approval, update `web/src/lib/teams.ts` following the format rules below.
 
 ## What to Update
 
