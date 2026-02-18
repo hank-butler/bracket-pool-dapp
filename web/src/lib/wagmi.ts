@@ -11,11 +11,11 @@ export const config = projectId && projectId !== 'PLACEHOLDER'
   ? getDefaultConfig({
       appName: 'Bracket Pool',
       projectId,
-      chains: [foundry, sepolia, mainnet],
+      chains: [sepolia, mainnet, foundry],
       ssr: true,
     })
   : createConfig({
-      chains: [foundry, sepolia, mainnet],
+      chains: [sepolia, mainnet, foundry],
       connectors: [injected()],
       transports: {
         [foundry.id]: http(),
