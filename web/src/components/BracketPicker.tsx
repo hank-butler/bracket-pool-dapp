@@ -4,13 +4,13 @@ import { useState, useCallback, useMemo } from 'react';
 import {
   type BracketState,
   type Game,
+  type TeamInfo,
   createEmptyState,
   getGamesForCount,
   getGameTeams,
   selectWinner,
   isComplete,
   randomFill,
-  ROUND_NAMES,
 } from '@/lib/teams';
 
 // Layout constants
@@ -19,7 +19,7 @@ const MATCHUP_H = TEAM_H * 2 + 4; // 2 teams + border
 const MATCHUP_GAP = 8;
 const ROUND_W = 144;     // matchup width (140) + 4 padding
 const CONN_W = 24;
-const REGIONS = ['East', 'West', 'South', 'Midwest'] as const;
+const REGIONS = ['South', 'East', 'Midwest', 'West'] as const;
 
 const REGION_CLASS: Record<string, string> = {
   East: 'region-east',
@@ -75,8 +75,8 @@ export function BracketPicker({ gameCount, onComplete, disabled }: BracketPicker
     }
   }, [state, onComplete]);
 
-  // For non-67 game brackets, fall back to simple list
-  if (gameCount !== 67) {
+  // For non-63 game brackets, fall back to simple list
+  if (gameCount !== 63) {
     return (
       <SimpleBracket
         games={games}
@@ -91,9 +91,6 @@ export function BracketPicker({ gameCount, onComplete, disabled }: BracketPicker
       />
     );
   }
-
-  // First Four: games 0-3
-  const firstFourGames = games.filter((g) => g.round === 0);
 
   // Region games: rounds 1-4
   const regionGames = new Map<string, Game[]>();
@@ -130,28 +127,6 @@ export function BracketPicker({ gameCount, onComplete, disabled }: BracketPicker
           style={{ width: `${(pickedCount / gameCount) * 100}%` }}
         />
       </div>
-
-      {/* First Four */}
-      <div className="region-final">
-        <div className="bracket-region-title">
-          <span className="star">&#9733;</span> First Four
-        </div>
-        <div className="flex gap-3 flex-wrap">
-          {firstFourGames.map((game) => (
-            <MatchupBox
-              key={game.index}
-              game={game}
-              picks={state.picks}
-              pickNames={state.pickNames}
-              onPick={handlePick}
-              disabled={disabled}
-              style={{ position: 'relative', width: 140 }}
-            />
-          ))}
-        </div>
-      </div>
-
-      <hr />
 
       {/* Region Brackets */}
       {REGIONS.map((region) => (
@@ -448,13 +423,6 @@ function MatchupBox({
   );
 }
 
-// Extract seed number from team name like "East 1" -> "1"
-function extractSeed(name: string): string {
-  const parts = name.split(' ');
-  const last = parts[parts.length - 1];
-  return /^\d+$/.test(last) ? last : '';
-}
-
 function TeamRow({
   team,
   isSelected,
@@ -462,7 +430,7 @@ function TeamRow({
   onClick,
   divider,
 }: {
-  team: { id: `0x${string}`; name: string } | null;
+  team: TeamInfo | null;
   isSelected: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -477,7 +445,7 @@ function TeamRow({
     );
   }
 
-  const seed = extractSeed(team.name);
+  const seed = team.seed;
 
   return (
     <div
@@ -486,14 +454,14 @@ function TeamRow({
       } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       onClick={disabled ? undefined : onClick}
     >
-      {seed && <span className="bracket-seed">{seed}</span>}
+      {seed > 0 && <span className="bracket-seed">{seed}</span>}
       <span className="bracket-team-name">{team.name}</span>
       {isSelected && <span className="bracket-team-dot">&#9679;</span>}
     </div>
   );
 }
 
-// ─── Simple Bracket fallback (non-67 game) ──────────────────────────────────
+// ─── Simple Bracket fallback (non-63 game) ──────────────────────────────────
 
 function SimpleBracket({
   games,

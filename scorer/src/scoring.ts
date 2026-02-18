@@ -1,12 +1,11 @@
 export function getPointsForGame(gameIndex: number): number {
-  if (gameIndex < 0 || gameIndex > 66) throw new Error(`Invalid game index: ${gameIndex}`);
-  if (gameIndex < 4) return 5;
-  if (gameIndex < 36) return 10;
-  if (gameIndex < 52) return 20;
-  if (gameIndex < 60) return 40;
-  if (gameIndex < 64) return 80;
-  if (gameIndex < 66) return 160;
-  return 320;
+  if (gameIndex < 0 || gameIndex > 62) throw new Error(`Invalid game index: ${gameIndex}`);
+  if (gameIndex < 32) return 10;   // Round of 64
+  if (gameIndex < 48) return 20;   // Round of 32
+  if (gameIndex < 56) return 40;   // Sweet 16
+  if (gameIndex < 60) return 80;   // Elite 8
+  if (gameIndex < 62) return 160;  // Final Four
+  return 320;                       // Championship
 }
 
 export function scoreEntry(picks: `0x${string}`[], results: `0x${string}`[]): number {

@@ -29,7 +29,7 @@ contract DeployLocalScript is Script {
 
         address pool = factory.createPool(
             "March Madness 2026",
-            67,
+            63,
             lockTime,
             finalizeDeadline,
             basePrice,

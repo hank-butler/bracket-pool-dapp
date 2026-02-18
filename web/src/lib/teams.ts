@@ -10,9 +10,9 @@ export interface Team {
 export interface Game {
   index: number;
   round: number;
-  region: string | null; // null for Final Four / Championship
-  sourceGames: [number, number] | null; // null for first-round games
-  sourceSeeds: [number, number] | null; // only for first-round games
+  region: string | null;
+  sourceGames: [number, number] | null;
+  sourceSeeds: [number, number] | null;
 }
 
 export interface BracketState {
@@ -21,69 +21,131 @@ export interface BracketState {
   tiebreaker: number;
 }
 
+export interface TeamInfo {
+  id: `0x${string}`;
+  name: string;
+  seed: number;
+}
+
 function teamId(name: string): `0x${string}` {
   return keccak256(toHex(name));
 }
 
-const REGIONS = ['East', 'West', 'South', 'Midwest'] as const;
+const REGIONS = ['South', 'East', 'Midwest', 'West'] as const;
 
-// Standard NCAA seeding matchups for Round of 64
 const SEED_MATCHUPS: [number, number][] = [
   [1, 16], [8, 9], [5, 12], [4, 13], [6, 11], [3, 14], [7, 10], [2, 15],
 ];
 
-function generateTeams(): Team[] {
-  const teams: Team[] = [];
-  for (const region of REGIONS) {
-    for (let seed = 1; seed <= 16; seed++) {
-      const name = `${region} ${seed}`;
-      teams.push({ name, seed, region, id: teamId(name) });
-    }
-  }
-  // 4 First Four extras (play-in games)
-  for (let i = 0; i < 4; i++) {
-    const name = `First Four ${i + 1}`;
-    teams.push({ name, seed: 16, region: REGIONS[i], id: teamId(name) });
-  }
-  return teams;
-}
+// ─── 2025 NCAA Tournament Teams ────────────────────────────────────────────
 
-export const ALL_TEAMS = generateTeams();
+export const ALL_TEAMS: Team[] = [
+  // South Region
+  { name: 'Auburn', seed: 1, region: 'South', id: teamId('Auburn') },
+  { name: 'Michigan State', seed: 2, region: 'South', id: teamId('Michigan State') },
+  { name: 'Iowa State', seed: 3, region: 'South', id: teamId('Iowa State') },
+  { name: 'Texas A&M', seed: 4, region: 'South', id: teamId('Texas A&M') },
+  { name: 'Michigan', seed: 5, region: 'South', id: teamId('Michigan') },
+  { name: 'Ole Miss', seed: 6, region: 'South', id: teamId('Ole Miss') },
+  { name: 'Marquette', seed: 7, region: 'South', id: teamId('Marquette') },
+  { name: 'Louisville', seed: 8, region: 'South', id: teamId('Louisville') },
+  { name: 'Creighton', seed: 9, region: 'South', id: teamId('Creighton') },
+  { name: 'New Mexico', seed: 10, region: 'South', id: teamId('New Mexico') },
+  { name: 'North Carolina', seed: 11, region: 'South', id: teamId('North Carolina') },
+  { name: 'UC San Diego', seed: 12, region: 'South', id: teamId('UC San Diego') },
+  { name: 'Yale', seed: 13, region: 'South', id: teamId('Yale') },
+  { name: 'Lipscomb', seed: 14, region: 'South', id: teamId('Lipscomb') },
+  { name: 'Bryant', seed: 15, region: 'South', id: teamId('Bryant') },
+  { name: 'Alabama State', seed: 16, region: 'South', id: teamId('Alabama State') },
+
+  // East Region
+  { name: 'Duke', seed: 1, region: 'East', id: teamId('Duke') },
+  { name: 'Alabama', seed: 2, region: 'East', id: teamId('Alabama') },
+  { name: 'Wisconsin', seed: 3, region: 'East', id: teamId('Wisconsin') },
+  { name: 'Arizona', seed: 4, region: 'East', id: teamId('Arizona') },
+  { name: 'Oregon', seed: 5, region: 'East', id: teamId('Oregon') },
+  { name: 'BYU', seed: 6, region: 'East', id: teamId('BYU') },
+  { name: "Saint Mary's", seed: 7, region: 'East', id: teamId("Saint Mary's") },
+  { name: 'Mississippi State', seed: 8, region: 'East', id: teamId('Mississippi State') },
+  { name: 'Baylor', seed: 9, region: 'East', id: teamId('Baylor') },
+  { name: 'Vanderbilt', seed: 10, region: 'East', id: teamId('Vanderbilt') },
+  { name: 'VCU', seed: 11, region: 'East', id: teamId('VCU') },
+  { name: 'Liberty', seed: 12, region: 'East', id: teamId('Liberty') },
+  { name: 'Akron', seed: 13, region: 'East', id: teamId('Akron') },
+  { name: 'Montana', seed: 14, region: 'East', id: teamId('Montana') },
+  { name: 'Robert Morris', seed: 15, region: 'East', id: teamId('Robert Morris') },
+  { name: "Mount St. Mary's", seed: 16, region: 'East', id: teamId("Mount St. Mary's") },
+
+  // Midwest Region
+  { name: 'Houston', seed: 1, region: 'Midwest', id: teamId('Houston') },
+  { name: 'Tennessee', seed: 2, region: 'Midwest', id: teamId('Tennessee') },
+  { name: 'Kentucky', seed: 3, region: 'Midwest', id: teamId('Kentucky') },
+  { name: 'Purdue', seed: 4, region: 'Midwest', id: teamId('Purdue') },
+  { name: 'Clemson', seed: 5, region: 'Midwest', id: teamId('Clemson') },
+  { name: 'Illinois', seed: 6, region: 'Midwest', id: teamId('Illinois') },
+  { name: 'UCLA', seed: 7, region: 'Midwest', id: teamId('UCLA') },
+  { name: 'Gonzaga', seed: 8, region: 'Midwest', id: teamId('Gonzaga') },
+  { name: 'Georgia', seed: 9, region: 'Midwest', id: teamId('Georgia') },
+  { name: 'Utah State', seed: 10, region: 'Midwest', id: teamId('Utah State') },
+  { name: 'Texas', seed: 11, region: 'Midwest', id: teamId('Texas') },
+  { name: 'McNeese', seed: 12, region: 'Midwest', id: teamId('McNeese') },
+  { name: 'High Point', seed: 13, region: 'Midwest', id: teamId('High Point') },
+  { name: 'Troy', seed: 14, region: 'Midwest', id: teamId('Troy') },
+  { name: 'Wofford', seed: 15, region: 'Midwest', id: teamId('Wofford') },
+  { name: 'SIUE', seed: 16, region: 'Midwest', id: teamId('SIUE') },
+
+  // West Region
+  { name: 'Florida', seed: 1, region: 'West', id: teamId('Florida') },
+  { name: "St. John's", seed: 2, region: 'West', id: teamId("St. John's") },
+  { name: 'Texas Tech', seed: 3, region: 'West', id: teamId('Texas Tech') },
+  { name: 'Maryland', seed: 4, region: 'West', id: teamId('Maryland') },
+  { name: 'Memphis', seed: 5, region: 'West', id: teamId('Memphis') },
+  { name: 'Missouri', seed: 6, region: 'West', id: teamId('Missouri') },
+  { name: 'Kansas', seed: 7, region: 'West', id: teamId('Kansas') },
+  { name: 'UConn', seed: 8, region: 'West', id: teamId('UConn') },
+  { name: 'Oklahoma', seed: 9, region: 'West', id: teamId('Oklahoma') },
+  { name: 'Arkansas', seed: 10, region: 'West', id: teamId('Arkansas') },
+  { name: 'Drake', seed: 11, region: 'West', id: teamId('Drake') },
+  { name: 'Colorado State', seed: 12, region: 'West', id: teamId('Colorado State') },
+  { name: 'Grand Canyon', seed: 13, region: 'West', id: teamId('Grand Canyon') },
+  { name: 'UNCW', seed: 14, region: 'West', id: teamId('UNCW') },
+  { name: 'Omaha', seed: 15, region: 'West', id: teamId('Omaha') },
+  { name: 'Norfolk State', seed: 16, region: 'West', id: teamId('Norfolk State') },
+];
 
 export function getTeamsByRegion(region: string): Team[] {
-  return ALL_TEAMS.filter((t) => t.region === region && !t.name.startsWith('First Four'));
+  return ALL_TEAMS.filter((t) => t.region === region);
 }
+
+function getTeamById(id: `0x${string}`): Team | undefined {
+  return ALL_TEAMS.find((t) => t.id === id);
+}
+
+// ─── Game Structure ────────────────────────────────────────────────────────
 
 function buildGames(gameCount: number): Game[] {
   const games: Game[] = [];
 
-  if (gameCount === 67) {
-    // Full 67-game bracket: 4 play-in + 32 R64 + 16 R32 + 8 S16 + 4 E8 + 2 FF + 1 Champ
-
-    // Games 0-3: First Four (play-in)
-    for (let i = 0; i < 4; i++) {
-      games.push({ index: i, round: 0, region: REGIONS[i], sourceGames: null, sourceSeeds: null });
-    }
-
-    // Games 4-35: Round of 64 (8 per region)
+  if (gameCount === 63) {
+    // Games 0-31: Round of 64 (8 per region)
     for (let r = 0; r < 4; r++) {
       for (let m = 0; m < 8; m++) {
-        const idx = 4 + r * 8 + m;
+        const idx = r * 8 + m;
         games.push({
           index: idx,
           round: 1,
           region: REGIONS[r],
-          sourceGames: m === 0 ? [r, null as unknown as number] : null, // first game in each region fed by play-in
+          sourceGames: null,
           sourceSeeds: SEED_MATCHUPS[m],
         });
       }
     }
 
-    // Games 36-51: Round of 32 (4 per region)
+    // Games 32-47: Round of 32 (4 per region)
     for (let r = 0; r < 4; r++) {
       for (let m = 0; m < 4; m++) {
-        const idx = 36 + r * 4 + m;
-        const baseR64 = 4 + r * 8;
+        const idx = 32 + r * 4 + m;
+        const baseR64 = r * 8;
         games.push({
           index: idx,
           round: 2,
@@ -94,11 +156,11 @@ function buildGames(gameCount: number): Game[] {
       }
     }
 
-    // Games 52-59: Sweet 16 (2 per region)
+    // Games 48-55: Sweet 16 (2 per region)
     for (let r = 0; r < 4; r++) {
       for (let m = 0; m < 2; m++) {
-        const idx = 52 + r * 2 + m;
-        const baseR32 = 36 + r * 4;
+        const idx = 48 + r * 2 + m;
+        const baseR32 = 32 + r * 4;
         games.push({
           index: idx,
           round: 3,
@@ -109,10 +171,10 @@ function buildGames(gameCount: number): Game[] {
       }
     }
 
-    // Games 60-63: Elite 8 (1 per region)
+    // Games 56-59: Elite 8 (1 per region)
     for (let r = 0; r < 4; r++) {
-      const idx = 60 + r;
-      const baseS16 = 52 + r * 2;
+      const idx = 56 + r;
+      const baseS16 = 48 + r * 2;
       games.push({
         index: idx,
         round: 4,
@@ -122,14 +184,13 @@ function buildGames(gameCount: number): Game[] {
       });
     }
 
-    // Games 64-65: Final Four
-    games.push({ index: 64, round: 5, region: null, sourceGames: [60, 61], sourceSeeds: null });
-    games.push({ index: 65, round: 5, region: null, sourceGames: [62, 63], sourceSeeds: null });
+    // Games 60-61: Final Four
+    games.push({ index: 60, round: 5, region: null, sourceGames: [56, 57], sourceSeeds: null });
+    games.push({ index: 61, round: 5, region: null, sourceGames: [58, 59], sourceSeeds: null });
 
-    // Game 66: Championship
-    games.push({ index: 66, round: 6, region: null, sourceGames: [64, 65], sourceSeeds: null });
+    // Game 62: Championship
+    games.push({ index: 62, round: 6, region: null, sourceGames: [60, 61], sourceSeeds: null });
   } else {
-    // Generic: treat all games as independent (no cascading)
     for (let i = 0; i < gameCount; i++) {
       games.push({ index: i, round: 0, region: null, sourceGames: null, sourceSeeds: null });
     }
@@ -138,10 +199,9 @@ function buildGames(gameCount: number): Game[] {
   return games;
 }
 
-export const GAMES_67 = buildGames(67);
+export const GAMES_63 = buildGames(63);
 
 export const ROUND_NAMES: Record<number, string> = {
-  0: 'First Four',
   1: 'Round of 64',
   2: 'Round of 32',
   3: 'Sweet 16',
@@ -150,71 +210,40 @@ export const ROUND_NAMES: Record<number, string> = {
   6: 'Championship',
 };
 
-// Get the two team options for a game given current picks
+// ─── Game Team Resolution ──────────────────────────────────────────────────
+
 export function getGameTeams(
   game: Game,
   picks: (`0x${string}` | null)[],
   pickNames: (string | null)[],
-): [{ id: `0x${string}`; name: string } | null, { id: `0x${string}`; name: string } | null] {
-  if (game.round === 0) {
-    // Play-in: two First Four teams + the region's 16-seed
-    const ff = ALL_TEAMS.find((t) => t.name === `First Four ${game.index + 1}`)!;
-    const seed16 = ALL_TEAMS.find((t) => t.region === game.region && t.seed === 16 && !t.name.startsWith('First Four'))!;
-    return [
-      { id: ff.id, name: ff.name },
-      { id: seed16.id, name: seed16.name },
-    ];
-  }
-
+): [TeamInfo | null, TeamInfo | null] {
   if (game.round === 1 && game.sourceSeeds) {
     const [seedA, seedB] = game.sourceSeeds;
     const region = game.region!;
-
-    let teamA: { id: `0x${string}`; name: string };
-    if (seedA === 16 || seedB === 16) {
-      // The 1v16 matchup: 16-seed spot may be filled by play-in winner
-      const playInIndex = REGIONS.indexOf(region as typeof REGIONS[number]);
-      if (seedA === 16 && picks[playInIndex]) {
-        teamA = { id: picks[playInIndex]!, name: pickNames[playInIndex] || 'TBD' };
-      } else if (seedA === 16) {
-        // Play-in not yet decided
-        return [null, { id: getTeamsByRegion(region).find((t) => t.seed === seedB)!.id, name: `${region} ${seedB}` }];
-      } else {
-        teamA = { id: getTeamsByRegion(region).find((t) => t.seed === seedA)!.id, name: `${region} ${seedA}` };
-      }
-
-      let teamB: { id: `0x${string}`; name: string };
-      if (seedB === 16 && picks[playInIndex]) {
-        teamB = { id: picks[playInIndex]!, name: pickNames[playInIndex] || 'TBD' };
-      } else if (seedB === 16) {
-        return [{ id: getTeamsByRegion(region).find((t) => t.seed === seedA)!.id, name: `${region} ${seedA}` }, null];
-      } else {
-        teamB = { id: getTeamsByRegion(region).find((t) => t.seed === seedB)!.id, name: `${region} ${seedB}` };
-      }
-
-      return [teamA, teamB];
-    }
-
     const a = getTeamsByRegion(region).find((t) => t.seed === seedA)!;
     const b = getTeamsByRegion(region).find((t) => t.seed === seedB)!;
     return [
-      { id: a.id, name: a.name },
-      { id: b.id, name: b.name },
+      { id: a.id, name: a.name, seed: a.seed },
+      { id: b.id, name: b.name, seed: b.seed },
     ];
   }
 
-  // Later rounds: teams come from source game winners
   if (game.sourceGames) {
     const [srcA, srcB] = game.sourceGames;
-    const teamA = picks[srcA] ? { id: picks[srcA]!, name: pickNames[srcA] || 'TBD' } : null;
-    const teamB = picks[srcB] ? { id: picks[srcB]!, name: pickNames[srcB] || 'TBD' } : null;
+    const teamA = picks[srcA]
+      ? { id: picks[srcA]!, name: pickNames[srcA] || 'TBD', seed: getTeamById(picks[srcA]!)?.seed ?? 0 }
+      : null;
+    const teamB = picks[srcB]
+      ? { id: picks[srcB]!, name: pickNames[srcB] || 'TBD', seed: getTeamById(picks[srcB]!)?.seed ?? 0 }
+      : null;
     return [teamA, teamB];
   }
 
   return [null, null];
 }
 
-// Find all downstream game indices that depend on a given game
+// ─── Downstream Invalidation ───────────────────────────────────────────────
+
 function getDownstreamGames(gameIndex: number, games: Game[]): number[] {
   const downstream: number[] = [];
   for (const g of games) {
@@ -239,14 +268,11 @@ export function selectWinner(
   newPicks[gameIndex] = winnerId;
   newNames[gameIndex] = winnerName;
 
-  // Clear invalidated downstream picks
   const downstream = getDownstreamGames(gameIndex, games);
   for (const idx of downstream) {
     if (newPicks[idx] && newPicks[idx] !== winnerId) {
-      // Check if the downstream pick was the OLD winner of this game — if so clear it
       const oldPick = state.picks[gameIndex];
       if (oldPick && oldPick !== winnerId) {
-        // Invalidate any downstream pick that was the old winner
         if (newPicks[idx] === oldPick) {
           newPicks[idx] = null;
           newNames[idx] = null;
@@ -257,6 +283,8 @@ export function selectWinner(
 
   return { picks: newPicks, pickNames: newNames, tiebreaker: state.tiebreaker };
 }
+
+// ─── State Helpers ─────────────────────────────────────────────────────────
 
 export function createEmptyState(gameCount: number): BracketState {
   return {
@@ -275,7 +303,7 @@ export function picksToBytes32Array(state: BracketState): `0x${string}`[] {
 }
 
 export function randomFill(gameCount: number): BracketState {
-  const games = gameCount === 67 ? GAMES_67 : buildGames(gameCount);
+  const games = gameCount === 63 ? GAMES_63 : buildGames(gameCount);
   let state = createEmptyState(gameCount);
 
   for (const game of games) {
@@ -295,5 +323,5 @@ export function randomFill(gameCount: number): BracketState {
 }
 
 export function getGamesForCount(gameCount: number): Game[] {
-  return gameCount === 67 ? GAMES_67 : buildGames(gameCount);
+  return gameCount === 63 ? GAMES_63 : buildGames(gameCount);
 }

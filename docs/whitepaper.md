@@ -110,7 +110,7 @@ The protocol is designed to be **sport-agnostic**. The smart contracts know noth
 | Tournament | Format | Target Launch |
 |-----------|--------|---------------|
 | FIFA World Cup 2026 | Group stage + knockout bracket | June 2026 (primary launch) |
-| March Madness | 68-team single elimination | March 2027 |
+| March Madness | 64-team single elimination (63 games) | March 2027 |
 | NBA Playoffs | Conference brackets, best-of-7 | April 2027 |
 | NHL Playoffs | Conference brackets, best-of-7 | April 2027 |
 | NFL Playoffs | Conference brackets | January 2027 |
@@ -213,7 +213,7 @@ BracketPoolFactory (deploys pools)
     ├── BracketPool: "World Cup 2026 - Minnow"  (gameCount=88, entry=$100)
     ├── BracketPool: "World Cup 2026 - Shark"   (gameCount=88, entry=$1,000)
     ├── BracketPool: "World Cup 2026 - Whale"   (gameCount=88, entry=$10,000)
-    ├── BracketPool: "March Madness 2027"        (gameCount=67, entry=$50)
+    ├── BracketPool: "March Madness 2027"        (gameCount=63, entry=$50)
     └── ...any tournament, any sport
 ```
 
@@ -229,17 +229,15 @@ The contracts are **sport-agnostic**. The same contract handles World Cup bracke
 
 ### Off-Chain Scorer (TypeScript)
 
-A modular TypeScript pipeline that:
+A TypeScript pipeline that processes tournament results end-to-end:
 1. Reads entry data from on-chain events
-2. Loads the appropriate sport scoring module
-3. Validates pick consistency (e.g., knockout picks must follow from group picks)
-4. Scores every entry against actual results
-5. Ranks entries by score and tiebreaker
-6. Calculates prize distribution
-7. Builds a Merkle tree for on-chain verification
-8. Publishes proofs to IPFS for permanent availability
+2. Scores every entry against actual results (point-per-game with round multipliers)
+3. Ranks entries by score descending, tiebreaker distance ascending
+4. Calculates prize distribution (winner-take-all for rank 1)
+5. Builds a Merkle tree for on-chain verification
+6. Outputs proofs for each winner to claim on-chain
 
-Each sport plugs into the pipeline via a standard interface — only the scoring rules and validation logic change.
+The current implementation is purpose-built for March Madness (63-game bracket). The architecture supports multi-sport expansion — modular sport scoring modules and pick-consistency validation (e.g., knockout picks must follow from group picks) are planned for the World Cup build phase.
 
 ### Frontend (Next.js)
 
@@ -252,23 +250,24 @@ A web application with:
 
 ### Deployment
 
-Target deployment on **Base** (Ethereum L2) for sub-cent gas costs, with USDC as the primary denomination. The smart contracts are chain-agnostic and can be deployed to any EVM-compatible chain.
+Primary deployment on **Ethereum mainnet** with USDC as the primary denomination. L2 deployment (Base) planned for lower entry-tier pools (e.g., Minnow $100) where sub-cent gas costs matter. The smart contracts are chain-agnostic and can be deployed to any EVM-compatible chain.
 
 ---
 
 ## Current Status
 
-This is not a concept — working code exists today.
+This is not a concept — the MVP is feature-complete.
 
 | Component | Status |
 |-----------|--------|
 | Smart contracts (BracketPool + Factory) | Complete — 64 tests passing, 100% coverage |
-| Off-chain scorer (scoring, ranking, Merkle tree) | Complete — 23 tests passing |
-| Frontend (pool list, pool detail, wallet connect) | Partial — read-only pages working, build passes |
-| March Madness PoC | In progress — serves as demo for investor meetings |
+| Off-chain scorer (scoring, ranking, Merkle tree) | Complete — 21 tests passing |
+| Frontend (bracket picker, entry, claim, refund) | Complete — bracket picker, entry submission, claiming, and refund flows built; builds cleanly |
+| March Madness PoC | Complete — real 2025 teams integrated, 63-game bracket working end-to-end on local Anvil |
+| Local development environment | Working — full end-to-end flow on local Anvil |
 | World Cup 2026 format | Designed — pick encoding, scoring, and architecture documented |
 
-The codebase is on GitHub with comprehensive documentation including architecture decisions, analysis of edge cases, and a detailed implementation plan.
+The March Madness MVP is feature-complete and ready for testnet deployment. The codebase is on GitHub with comprehensive documentation including architecture decisions, analysis of edge cases, and a detailed implementation plan.
 
 ---
 
@@ -280,27 +279,12 @@ The codebase is on GitHub with comprehensive documentation including architectur
 | Contract Updates | March 2026 | sportId, multi-token, results correction, entry cap |
 | Scorer Refactor | April 2026 | Multi-sport module system, shared config |
 | World Cup Build | April–May 2026 | Bracket picker, World Cup scorer, tiered payouts, live leaderboard |
-| Base L2 Deployment | May 2026 | Testnet → mainnet on Base |
+| Mainnet Deployment | May 2026 | Testnet → Ethereum mainnet (Shark/Whale tiers); Base L2 for Minnow tier |
 | **World Cup Launch** | **June 11, 2026** | **All three entry tiers live for FIFA World Cup 2026** |
 | Fiat On-Ramp | Summer 2026 | Credit card entry for non-crypto users |
 | Additional Sports | Fall 2026+ | NFL, College Football, NBA, NHL, F1 |
 | Protocol Token | TBD | Airdrop + revenue sharing (pending legal review) |
 | Decentralization | 2027+ | Chainlink CRE oracle integration, trustless scoring |
-
----
-
-## What We're Looking For
-
-We're building the team to take this from working prototype to World Cup launch. Key roles:
-
-- **Frontend / Full-Stack Engineer** — React/Next.js, wagmi, blockchain UI. Own the bracket picker and user experience.
-- **Smart Contract / Backend Engineer** — Solidity, Foundry, TypeScript. Own the scorer pipeline and contract upgrades.
-- **Designer** — Make the bracket picker intuitive and the overall product polished. Sports fans need to love using this.
-- **Growth / Marketing** — Sports community building, partnerships, launch strategy for World Cup.
-
-The core architecture is built. The contracts work. The scorer works. What's needed now is execution — shipping the World Cup experience and getting users in the door before June 11.
-
----
 
 *For technical details, see the full documentation in the project repository:*
 - *World Cup design: `docs/plans/2025-02-10-world-cup-pivot-design.md`*
