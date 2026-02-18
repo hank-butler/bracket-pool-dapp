@@ -4,41 +4,43 @@
 
 ## Project Status
 
-The MVP is feature-complete and has been deployed to Sepolia testnet. The factory contract is live and verified on Etherscan. Frontend is configured to point at the Sepolia deployment but has not yet been deployed to Vercel. Branch `feature/real-teams-2025` is still open — PR to `main` has not been created yet.
+The MVP is fully deployed to Sepolia testnet with a live frontend on Vercel. A test pool has been created and a bracket entry successfully submitted via the live site. The full E2E cycle (scorer → Merkle root → claim) still needs to be completed once the test pool's lock time passes.
 
 | Layer | Status | Tests |
 |-------|--------|-------|
 | Smart Contracts (Foundry) | Complete | 64 tests pass |
 | Off-Chain Scorer (TypeScript) | Complete | Pre-existing Node.js version issue (needs Node 16+) |
-| Frontend (Next.js + wagmi) | Complete | Pre-existing Node.js version issue (`npm run build` fails, `npm run dev` works) |
+| Frontend (Next.js + wagmi) | Complete | Live on Vercel, manually E2E verified |
 
 ## What Was Done This Session
 
-- **Completed Sepolia deployment (Task 3):**
-  - Set up Alchemy Sepolia RPC URL and added to `contracts/.env`
-  - Created new dedicated MetaMask deployer wallet (separate from Anvil dev key)
-  - Funded deployer with Sepolia ETH via Google Cloud faucet
-  - Obtained Etherscan API key and WalletConnect Project ID
-  - First deploy attempt used stale placeholder USDC address (`0x000...0001`) — caught from broadcast JSON, redeployed with correct Circle Sepolia USDC (`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`)
-  - **Factory deployed to Sepolia:** `0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd` (verified on Etherscan)
-  - Updated `web/.env.local` with new factory address and WalletConnect Project ID
-- **UI fix (prior to this session):** Randomize button visibility issue resolved — no further action needed
+- **Deployed frontend to Vercel** at `https://bracket-pool-dapp.vercel.app/`
+  - Root directory set to `web/`
+  - Env vars added to Vercel dashboard: `NEXT_PUBLIC_FACTORY_ADDRESS`, `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
+- **Fixed chain ordering bug** — wagmi config had `foundry` first, causing reads to default to localhost when no wallet connected; moved `sepolia` first (commit `9b40b2d`)
+- **Merged `feature/real-teams-2025` → `main`** via PR #3
+- **Created test pool on Sepolia** via `cast send` against the factory
+  - Pool address: `0x5eBca3ae0c84F597C922f3B0A8B2631b8049BCc3`
+  - Lock time: 2 hours after creation, Finalize deadline: 7 days
+  - Base price: 10 USDC, slope: 1%
+- **Successfully submitted a bracket entry** via the live Vercel site on Sepolia — full entry flow verified
 
 ## What's Next
 
-1. **Deploy frontend to Vercel** — repo must be pushed to GitHub first, then connect via Vercel dashboard; set env vars (`NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`, `NEXT_PUBLIC_FACTORY_ADDRESS`) in Vercel project settings
-2. **Full Sepolia E2E test** — create a test pool via the deployed frontend, submit entries, run scorer, post Merkle root, claim prize
-3. **Create PR** for `feature/real-teams-2025` → `main` — install `gh` CLI if needed (`sudo apt install gh && gh auth login`)
-4. **Fix Node.js version** — scorer tests and frontend build require Node 16+; install via `nvm`
-5. **Production readiness** — security audit/peer review, mainnet deploy, Gnosis Safe multisig for admin/treasury, verify contracts on mainnet Etherscan
-6. **World Cup 2026 pivot** — Phase B (`sportId` in contracts), Phase C (shared sports config), Phase D (World Cup bracket picker UI). Design doc: `docs/plans/2025-02-10-world-cup-pivot-design.md`
+1. **Complete the Sepolia E2E cycle** — after pool lock time passes:
+   - Run scorer: `tsx src/index.ts <poolAddress> <rpcUrl> <tiebreaker>` from `scorer/`
+   - Post Merkle root via `cast send` or admin UI
+   - Claim prize via browser
+2. **Fix Node.js version** — scorer and `npm run build` require Node 16+; install via `nvm`
+3. **Production readiness** — security audit/peer review, mainnet deploy, Gnosis Safe multisig for admin/treasury, verify contracts on mainnet Etherscan
+4. **World Cup 2026 pivot** — Phase B (`sportId` in contracts), Phase C (shared sports config), Phase D (World Cup bracket picker UI). Design doc: `docs/plans/2025-02-10-world-cup-pivot-design.md`
 
 ## Current Branch State
 
-- **Branch:** `feature/real-teams-2025` (12 commits ahead of `main`)
-- **Pushed:** Yes, up to date with `origin/feature/real-teams-2025`
-- **Open PR:** None — not yet created
-- **Uncommitted:** Only untracked files (`claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/screenshots/`, `contracts/broadcast/`) — none blocking
+- **Branch:** `main`
+- **Pushed:** Yes, up to date with `origin/main`
+- **Open PR:** None
+- **Uncommitted:** Only untracked files (`claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/screenshots/`) — none blocking
 
 ## Local Development Setup
 
@@ -65,7 +67,7 @@ npm run dev
 ### MetaMask Configuration
 
 - **Local (Anvil):** Network RPC `http://127.0.0.1:8545`, Chain ID `31337`; import Anvil account #0 key `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
-- **Sepolia:** Add Sepolia network in MetaMask; use the dedicated deployer wallet (not the Anvil key)
+- **Sepolia:** Use the dedicated deployer wallet (not the Anvil key); get test USDC from faucet.circle.com
 - Use Chrome/Brave (Safari doesn't support wallet extensions)
 
 ### Environment Files (not tracked by git)
@@ -88,8 +90,11 @@ NEXT_PUBLIC_FACTORY_ADDRESS=0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd
 ### Sepolia Deployment
 
 - **Factory:** `0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd` (verified on Sepolia Etherscan)
-- **USDC:** Circle Sepolia USDC at `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` (get test tokens from Circle's faucet)
+- **Test Pool:** `0x5eBca3ae0c84F597C922f3B0A8B2631b8049BCc3`
+- **Frontend:** `https://bracket-pool-dapp.vercel.app/`
+- **USDC:** Circle Sepolia USDC at `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`
 - Deploy command: `source .env && forge script script/Deploy.s.sol --rpc-url sepolia --broadcast --verify` (from `contracts/`)
+- Create pool command: `source .env && cast send <factory> "createPool(string,uint256,uint256,uint256,uint256,uint256)" "<name>" 63 $(($(date +%s) + 7200)) $(($(date +%s) + 604800)) 10000000 100 --rpc-url $SEPOLIA_RPC_URL --private-key $PRIVATE_KEY`
 
 ## Key Architecture Decisions
 
