@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { formatUnits } from 'viem';
 import { BracketPicker } from './BracketPicker';
+import { StandingsPicker } from './StandingsPicker';
 import { useEnterPool } from '@/hooks/useEnterPool';
-import { picksToBytes32Array } from '@/lib/teams';
+import { getPoolTypeConfig } from '@/lib/poolTypes';
 
 interface EntrySubmitProps {
   poolAddress: `0x${string}`;
@@ -46,11 +47,14 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount 
   );
 
   const isProcessing = state !== 'idle' && state !== 'success' && state !== 'error';
+  const poolConfig = getPoolTypeConfig(gameCount);
+
+  const PickerComponent = poolConfig.type === 'standings' ? StandingsPicker : BracketPicker;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg">Submit Your Bracket</h2>
+        <h2 className="text-lg">Submit Your {poolConfig.type === 'standings' ? 'Prediction' : 'Bracket'}</h2>
         <p className="text-xs">
           Entry price: <b>${formatUnits(currentPrice, 6)} USDC</b>
         </p>
@@ -74,7 +78,7 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount 
         </div>
       ) : (
         <>
-          <BracketPicker
+          <PickerComponent
             gameCount={gameCount}
             onComplete={handleComplete}
             disabled={isProcessing}

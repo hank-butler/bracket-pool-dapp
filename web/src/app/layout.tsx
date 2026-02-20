@@ -4,7 +4,7 @@ import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Bracket Pool",
-  description: "On-chain March Madness bracket pools",
+  description: "On-chain prediction pools — brackets, standings, and more",
 };
 
 export default function RootLayout({
@@ -20,7 +20,7 @@ export default function RootLayout({
           <div className="titlebar">
             <div className="flex items-center gap-1.5">
               <div className="titlebar-icon">&#9917;</div>
-              <span>Bracket Pool &mdash; On-Chain March Madness</span>
+              <span>Bracket Pool &mdash; On-Chain Predictions</span>
             </div>
             <div className="flex gap-0.5">
               <div className="titlebar-btn">&#9472;</div>
@@ -32,7 +32,7 @@ export default function RootLayout({
           {/* Marquee Ticker */}
           <div className="marquee-bar">
             <div className="marquee-scroll">
-              &#9733; Welcome to Bracket Pool &#9733; On-chain March Madness bracket pools &#9733; Pick your winners &#9733; Powered by Ethereum &#9733; Submit your bracket today! &#9733;
+              &#9733; Welcome to Bracket Pool &#9733; On-chain prediction pools &#9733; March Madness &#9733; IPL Cricket &#9733; Pick your winners &#9733; Powered by Ethereum &#9733; Submit your picks today! &#9733;
             </div>
           </div>
 
