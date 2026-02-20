@@ -6,6 +6,6 @@ export async function pinJSON(data: unknown, name: string): Promise<string> {
     pinataGateway: 'gateway.pinata.cloud',
   });
 
-  const upload = await pinata.upload.json(data).addMetadata({ name });
-  return upload.IpfsHash;
+  const upload = await pinata.upload.public.json(data as object).name(name);
+  return upload.cid;
 }
