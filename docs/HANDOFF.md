@@ -1,46 +1,43 @@
-# Handoff — 2026-02-17 — HB
+# Handoff — 2026-02-20 — CL
 
-> **Author:** HB | **Date:** 2026-02-17
+> **Author:** CL | **Date:** 2026-02-20
 
 ## Project Status
 
-The MVP is fully deployed to Sepolia testnet with a live frontend on Vercel. A test pool has been created and a bracket entry successfully submitted via the live site. The full E2E cycle (scorer → Merkle root → claim) still needs to be completed once the test pool's lock time passes.
+The MVP is deployed to Sepolia with a live frontend on Vercel. This session added IPL cricket standings prediction support as a second pool type alongside March Madness brackets, including a new scoring engine and drag-and-drop UI component. An issues tracker was created to document known technical debt.
 
 | Layer | Status | Tests |
 |-------|--------|-------|
 | Smart Contracts (Foundry) | Complete | 64 tests pass |
-| Off-Chain Scorer (TypeScript) | Complete | Pre-existing Node.js version issue (needs Node 16+) |
-| Frontend (Next.js + wagmi) | Complete | Live on Vercel, manually E2E verified |
+| Off-Chain Scorer (TypeScript) | Complete — IPL scoring added | 37 tests pass (16 new IPL tests) |
+| Frontend (Next.js + wagmi) | Complete — StandingsPicker added | Build succeeds, 6 pre-existing lint errors |
 
 ## What Was Done This Session
 
-- **Deployed frontend to Vercel** at `https://bracket-pool-dapp.vercel.app/`
-  - Root directory set to `web/`
-  - Env vars added to Vercel dashboard: `NEXT_PUBLIC_FACTORY_ADDRESS`, `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
-- **Fixed chain ordering bug** — wagmi config had `foundry` first, causing reads to default to localhost when no wallet connected; moved `sepolia` first (commit `9b40b2d`)
-- **Merged `feature/real-teams-2025` → `main`** via PR #3
-- **Created test pool on Sepolia** via `cast send` against the factory
-  - Pool address: `0x5eBca3ae0c84F597C922f3B0A8B2631b8049BCc3`
-  - Lock time: 2 hours after creation, Finalize deadline: 7 days
-  - Base price: 10 USDC, slope: 1%
-- **Successfully submitted a bracket entry** via the live Vercel site on Sepolia — full entry flow verified
+- **Reviewed IPL cricket branch** (`claude/general-session-A21Dy`) — two commits adding standings prediction support:
+  - `ef677bc` — Base IPL standings prediction (10 teams, StandingsPicker component, team data, pool type config)
+  - `5f4a073` — Weighted scoring engine (position accuracy + champion/runner-up/top-4 bonuses, perfect score = 150)
+- **Ran full test suite** — contracts (64 pass), scorer (37 pass), frontend build (success)
+- **Identified pool type detection issue** — frontend infers pool type from `gameCount` magic numbers (63 = MM, 10 = IPL), which is brittle for multi-sport support. Evaluated three solutions (contract field, name prefix convention, frontend config). Logged as medium priority in `docs/issues.md`.
+- **Identified pre-existing lint errors** — 6 errors and 4 warnings across `pool/[address]/page.tsx`, `ClaimPrize.tsx`, `useClaim.ts`, `useEnterPool.ts`. Logged as high priority in `docs/issues.md`.
+- **Created `docs/issues.md`** — new issue tracker for identified technical debt
+- **Created PR #6** — https://github.com/hank-butler/bracket-pool-dapp/pull/6 to merge `claude/general-session-A21Dy` into `main`
 
 ## What's Next
 
-1. **Complete the Sepolia E2E cycle** — after pool lock time passes:
-   - Run scorer: `tsx src/index.ts <poolAddress> <rpcUrl> <tiebreaker>` from `scorer/`
-   - Post Merkle root via `cast send` or admin UI
-   - Claim prize via browser
-2. **Fix Node.js version** — scorer and `npm run build` require Node 16+; install via `nvm`
-3. **Production readiness** — security audit/peer review, mainnet deploy, Gnosis Safe multisig for admin/treasury, verify contracts on mainnet Etherscan
-4. **World Cup 2026 pivot** — Phase B (`sportId` in contracts), Phase C (shared sports config), Phase D (World Cup bracket picker UI). Design doc: `docs/plans/2025-02-10-world-cup-pivot-design.md`
+1. **Merge PR #6** — IPL standings support into `main`
+2. **Fix pre-existing lint errors** (high priority) — conditional hooks in pool page, impure render in ClaimPrize, setState in useClaim effect, variable ordering in useEnterPool (see `docs/issues.md` #2)
+3. **Complete Sepolia E2E cycle** — run scorer against test pool after lock time, post Merkle root, claim prize via browser
+4. **Resolve pool type detection** (medium priority) — before adding more game types, replace `gameCount` magic number mapping with a robust approach (see `docs/issues.md` #1)
+5. **Production readiness** — security audit/peer review, mainnet deploy, Gnosis Safe multisig for admin/treasury, verify contracts on mainnet Etherscan
+6. **World Cup 2026 pivot** — Phase B (`sportId` in contracts), Phase C (shared sports config), Phase D (World Cup bracket picker UI)
 
 ## Current Branch State
 
-- **Branch:** `main`
-- **Pushed:** Yes, up to date with `origin/main`
-- **Open PR:** None
-- **Uncommitted:** Only untracked files (`claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/screenshots/`) — none blocking
+- **Branch:** `claude/general-session-A21Dy`
+- **Pushed:** Yes, up to date with remote
+- **Open PR:** #6 — https://github.com/hank-butler/bracket-pool-dapp/pull/6 (into `main`)
+- **Uncommitted:** Only `scorer/output-0xcafac3dd.json` (untracked, not relevant)
 
 ## Local Development Setup
 
@@ -104,6 +101,7 @@ NEXT_PUBLIC_FACTORY_ADDRESS=0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd
 - **5% fee** via `totalPoolValue * 500 / 10000` (Solidity integer division)
 - **Merkle tree claims** — scorer generates tree, root posted on-chain, proofs hosted on IPFS
 - **Claim deadline** — `finalizeDeadline + 90 days`, then admin can sweep unclaimed funds
-- **Tiebreaker** — predicted championship total score, closest wins, ties split evenly
-- **Team data** — static config file in `web/src/lib/teams.ts`, updated via `/update-teams` slash command on Selection Sunday
-- **Sport-agnostic contracts** — `gameCount` is a parameter, World Cup will use `gameCount=88` with a future `sportId` field
+- **Tiebreaker** — predicted championship total score (MM) or total sixes (IPL), closest wins, ties split evenly
+- **Team data** — static config files in `web/src/lib/teams.ts` (MM) and `web/src/lib/ipl.ts` (IPL), updated via `/update-teams` slash command on Selection Sunday
+- **Sport-agnostic contracts** — `gameCount` is a parameter; frontend maps `gameCount` to pool type via `web/src/lib/poolTypes.ts` (known brittleness, tracked in `docs/issues.md` #1)
+- **IPL scoring** — position accuracy (max 100) + bonuses for champion (+20), runner-up (+10), top-4 (+5 each, max 20) = perfect score 150
