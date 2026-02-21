@@ -1,3 +1,10 @@
+# Handoff — 2026-02-20 — CL
+
+> **Author:** CL | **Date:** 2026-02-20
+
+## Project Status
+
+The MVP is deployed to Sepolia with a live frontend on Vercel. This session added IPL cricket standings prediction support as a second pool type alongside March Madness brackets, including a new scoring engine and drag-and-drop UI component. An issues tracker was created to document known technical debt.
 # Handoff — 2026-02-19 — HB
 
 > **Author:** HB | **Date:** 2026-02-19
@@ -9,6 +16,35 @@ The admin UI is fully built and passing build checks on `feature/route-updates`.
 | Layer | Status | Tests |
 |-------|--------|-------|
 | Smart Contracts (Foundry) | Complete | 64 tests pass |
+| Off-Chain Scorer (TypeScript) | Complete — IPL scoring added | 37 tests pass (16 new IPL tests) |
+| Frontend (Next.js + wagmi) | Complete — StandingsPicker added | Build succeeds, 6 pre-existing lint errors |
+
+## What Was Done This Session
+
+- **Reviewed IPL cricket branch** (`claude/general-session-A21Dy`) — two commits adding standings prediction support:
+  - `ef677bc` — Base IPL standings prediction (10 teams, StandingsPicker component, team data, pool type config)
+  - `5f4a073` — Weighted scoring engine (position accuracy + champion/runner-up/top-4 bonuses, perfect score = 150)
+- **Ran full test suite** — contracts (64 pass), scorer (37 pass), frontend build (success)
+- **Identified pool type detection issue** — frontend infers pool type from `gameCount` magic numbers (63 = MM, 10 = IPL), which is brittle for multi-sport support. Evaluated three solutions (contract field, name prefix convention, frontend config). Logged as medium priority in `docs/issues.md`.
+- **Identified pre-existing lint errors** — 6 errors and 4 warnings across `pool/[address]/page.tsx`, `ClaimPrize.tsx`, `useClaim.ts`, `useEnterPool.ts`. Logged as high priority in `docs/issues.md`.
+- **Created `docs/issues.md`** — new issue tracker for identified technical debt
+- **Created PR #6** — https://github.com/hank-butler/bracket-pool-dapp/pull/6 to merge `claude/general-session-A21Dy` into `main`
+
+## What's Next
+
+1. **Merge PR #6** — IPL standings support into `main`
+2. **Fix pre-existing lint errors** (high priority) — conditional hooks in pool page, impure render in ClaimPrize, setState in useClaim effect, variable ordering in useEnterPool (see `docs/issues.md` #2)
+3. **Complete Sepolia E2E cycle** — run scorer against test pool after lock time, post Merkle root, claim prize via browser
+4. **Resolve pool type detection** (medium priority) — before adding more game types, replace `gameCount` magic number mapping with a robust approach (see `docs/issues.md` #1)
+5. **Production readiness** — security audit/peer review, mainnet deploy, Gnosis Safe multisig for admin/treasury, verify contracts on mainnet Etherscan
+6. **World Cup 2026 pivot** — Phase B (`sportId` in contracts), Phase C (shared sports config), Phase D (World Cup bracket picker UI)
+
+## Current Branch State
+
+- **Branch:** `claude/general-session-A21Dy`
+- **Pushed:** Yes, up to date with remote
+- **Open PR:** #6 — https://github.com/hank-butler/bracket-pool-dapp/pull/6 (into `main`)
+- **Uncommitted:** Only `scorer/output-0xcafac3dd.json` (untracked, not relevant)
 | Off-Chain Scorer (TypeScript) | Complete | 23 tests pass (4 test files) |
 | Frontend (Next.js + wagmi) | Admin UI built, pending smoke test | Build clean, 6 routes |
 
@@ -108,6 +144,10 @@ SCORER_RPC_URL=https://rpc.sepolia.org              # or http://127.0.0.1:8545 f
 - **5% fee** via `totalPoolValue * 500 / 10000` (Solidity integer division)
 - **Merkle tree claims** — scorer generates tree, root posted on-chain, proofs hosted on IPFS via Pinata
 - **Claim deadline** — `finalizeDeadline + 90 days`, then admin can sweep unclaimed funds
+- **Tiebreaker** — predicted championship total score (MM) or total sixes (IPL), closest wins, ties split evenly
+- **Team data** — static config files in `web/src/lib/teams.ts` (MM) and `web/src/lib/ipl.ts` (IPL), updated via `/update-teams` slash command on Selection Sunday
+- **Sport-agnostic contracts** — `gameCount` is a parameter; frontend maps `gameCount` to pool type via `web/src/lib/poolTypes.ts` (known brittleness, tracked in `docs/issues.md` #1)
+- **IPL scoring** — position accuracy (max 100) + bonuses for champion (+20), runner-up (+10), top-4 (+5 each, max 20) = perfect score 150
 - **Tiebreaker** — predicted championship total score, closest wins, ties split evenly
 - **Team data** — static config file in `web/src/lib/teams.ts`, updated via `/update-teams` slash command on Selection Sunday
 - **Sport-agnostic contracts** — `gameCount` is a parameter, World Cup will use `gameCount=88` with a future `sportId` field

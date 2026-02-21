@@ -77,8 +77,8 @@ export default function PoolPage({ params }: { params: Promise<{ address: string
 
         {showEntry && !isConnected && (
           <div className="panel-90s p-4 mb-4">
-            <h2 className="text-lg mb-2">Submit Your Bracket</h2>
-            <p>Connect your wallet to submit a bracket entry.</p>
+            <h2 className="text-lg mb-2">Submit Your Entry</h2>
+            <p>Connect your wallet to submit an entry.</p>
           </div>
         )}
 
