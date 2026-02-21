@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useFinalize } from '@/hooks/useAdminPool';
 
 interface Props {
@@ -11,18 +11,8 @@ interface Props {
 
 export function StepReviewFinalize({ poolAddress, merkleRoot, proofsCID }: Props) {
   const [phase, setPhase] = useState<'review' | 'setRoot' | 'setCID' | 'done'>('review');
-  const { setMerkleRoot, setProofsCID, isPending, isConfirming, isSuccess, error } = useFinalize(poolAddress);
+  const { setMerkleRoot, setProofsCID, isPending, isConfirming, error } = useFinalize(poolAddress);
 
-  // After setMerkleRoot confirms, move on to setProofsCID
-  useEffect(() => {
-    if (isSuccess && phase === 'setRoot') {
-      setPhase('setCID');
-      setProofsCID(proofsCID);
-    }
-    if (isSuccess && phase === 'setCID') {
-      setPhase('done');
-    }
-  }, [isSuccess, phase, proofsCID, setProofsCID]);
 
   if (phase === 'done') {
     return (
@@ -53,7 +43,13 @@ export function StepReviewFinalize({ poolAddress, merkleRoot, proofsCID }: Props
       </table>
       <button
         className="btn-90s"
-        onClick={() => { setPhase('setRoot'); setMerkleRoot(merkleRoot); }}
+        onClick={() => {
+          setPhase('setRoot');
+          setMerkleRoot(merkleRoot, () => {
+            setPhase('setCID');
+            setProofsCID(proofsCID, () => setPhase('done'));
+          });
+        }}
         disabled={isPending || isConfirming || phase !== 'review'}
       >
         {isPending ? 'Confirm in wallet...' : isConfirming ? 'Finalizing...' : 'Finalize Pool'}

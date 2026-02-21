@@ -22,7 +22,9 @@ export async function POST(req: NextRequest) {
       JSON.stringify(output, (_, v) => typeof v === 'bigint' ? v.toString() : v)
     );
 
-    const proofsCID = await pinJSON(serialized, `proofs-${poolAddress}`);
+    const proofsCID = process.env.PINATA_JWT
+      ? await pinJSON(serialized, `proofs-${poolAddress}`)
+      : `local-${poolAddress.slice(2, 10)}`;
 
     return NextResponse.json({
       merkleRoot: output.merkleRoot,

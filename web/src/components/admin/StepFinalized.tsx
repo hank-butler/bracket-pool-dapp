@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useSweepUnclaimed } from '@/hooks/useAdminPool';
 
 interface Props {
@@ -9,7 +10,8 @@ interface Props {
 
 export function StepFinalized({ poolAddress, claimDeadline }: Props) {
   const { sweepUnclaimed, isPending, isConfirming, isSuccess, error } = useSweepUnclaimed(poolAddress);
-  const canSweep = Date.now() / 1000 >= claimDeadline;
+  const [now] = useState(() => Date.now() / 1000);
+  const canSweep = now >= claimDeadline;
   const deadlineStr = new Date(claimDeadline * 1000).toLocaleString();
 
   return (

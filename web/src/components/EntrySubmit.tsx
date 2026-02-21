@@ -20,7 +20,6 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount 
   const {
     state,
     error,
-    needsApproval,
     enter,
     submitEntry,
     approveConfirmed,

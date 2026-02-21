@@ -51,22 +51,22 @@ export function useFinalize(poolAddress: `0x${string}`) {
   const { writeContract, data: hash, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  function setMerkleRoot(root: `0x${string}`) {
+  function setMerkleRoot(root: `0x${string}`, onSuccess?: () => void) {
     writeContract({
       address: poolAddress,
       abi: BracketPoolABI,
       functionName: 'setMerkleRoot',
       args: [root],
-    });
+    }, onSuccess ? { onSuccess } : undefined);
   }
 
-  function setProofsCID(cid: string) {
+  function setProofsCID(cid: string, onSuccess?: () => void) {
     writeContract({
       address: poolAddress,
       abi: BracketPoolABI,
       functionName: 'setProofsCID',
       args: [cid],
-    });
+    }, onSuccess ? { onSuccess } : undefined);
   }
 
   return { setMerkleRoot, setProofsCID, isPending, isConfirming, isSuccess, error };
