@@ -77,6 +77,28 @@ export function StepPostResults({ poolAddress, gameCount, onScorerComplete }: Pr
             value={resultsJson}
             onChange={e => setResultsJson(e.target.value)}
           />
+          <div className="mt-2 mb-2">
+            <label className="btn-90s text-xs cursor-pointer">
+              Load from file
+              <input
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = ev => setResultsJson(ev.target?.result as string);
+                  reader.readAsText(file);
+                }}
+              />
+            </label>
+            {resultsJson && (
+              <span className="text-xs ml-2 text-green-700">
+                {(() => { try { const a = JSON.parse(resultsJson); return Array.isArray(a) ? `${a.length} values loaded` : 'invalid'; } catch { return 'invalid JSON'; } })()}
+              </span>
+            )}
+          </div>
           <button className="btn-90s mt-2" onClick={handlePostResults} disabled={isPending || isConfirming}>
             {isPending ? 'Confirm in wallet...' : isConfirming ? 'Posting...' : 'Post Results'}
           </button>
