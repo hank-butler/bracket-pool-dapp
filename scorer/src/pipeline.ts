@@ -9,8 +9,9 @@ export async function runScorer(
   poolAddress: Address,
   rpcUrl: string,
   actualTiebreaker: number,
+  fromBlock?: bigint,
 ): Promise<ScorerOutput> {
-  const entries = await readEntries(poolAddress, rpcUrl);
+  const entries = await readEntries(poolAddress, rpcUrl, undefined, fromBlock);
   const results = await readGameResults(poolAddress, rpcUrl);
   const totalPoolValue = await readTotalPoolValue(poolAddress, rpcUrl);
 
