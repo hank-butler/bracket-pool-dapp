@@ -10,11 +10,10 @@ interface Props {
 }
 
 export function StepReviewFinalize({ poolAddress, merkleRoot, proofsCID }: Props) {
-  const [phase, setPhase] = useState<'review' | 'setRoot' | 'setCID' | 'done'>('review');
-  const { setMerkleRoot, setProofsCID, isPending, isConfirming, error } = useFinalize(poolAddress);
+  const [started, setStarted] = useState(false);
+  const { setMerkleRoot, isPending, isConfirming, isSuccess, rootSuccess, error } = useFinalize(poolAddress, proofsCID);
 
-
-  if (phase === 'done') {
+  if (isSuccess) {
     return (
       <div className="panel-90s p-4 mb-4">
         <h2 className="text-lg mb-2">Step 4: Finalized ✓</h2>
@@ -43,18 +42,12 @@ export function StepReviewFinalize({ poolAddress, merkleRoot, proofsCID }: Props
       </table>
       <button
         className="btn-90s"
-        onClick={() => {
-          setPhase('setRoot');
-          setMerkleRoot(merkleRoot, () => {
-            setPhase('setCID');
-            setProofsCID(proofsCID, () => setPhase('done'));
-          });
-        }}
-        disabled={isPending || isConfirming || phase !== 'review'}
+        onClick={() => { setStarted(true); setMerkleRoot(merkleRoot); }}
+        disabled={isPending || isConfirming || started}
       >
         {isPending ? 'Confirm in wallet...' : isConfirming ? 'Finalizing...' : 'Finalize Pool'}
       </button>
-      {phase === 'setCID' && <p className="text-sm mt-2">Setting proofs CID...</p>}
+      {rootSuccess && !isSuccess && <p className="text-sm mt-2 text-yellow-700">Merkle root set — confirm proofs CID in wallet...</p>}
       {error && <p className="status-error text-sm mt-1">{error.message}</p>}
     </div>
   );

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { BracketPoolABI, contracts, FACTORY_ADDRESS } from '@/lib/contracts';
 
@@ -47,29 +48,39 @@ export function useSetResults(poolAddress: `0x${string}`) {
   return { setResults, isPending, isConfirming, isSuccess, error };
 }
 
-export function useFinalize(poolAddress: `0x${string}`) {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+export function useFinalize(poolAddress: `0x${string}`, pendingCID?: string) {
+  const { writeContract: writeRoot, data: rootHash, isPending: rootPending, error: rootError } = useWriteContract();
+  const { writeContract: writeCID, data: cidHash, isPending: cidPending, error: cidError } = useWriteContract();
+  const { isLoading: rootConfirming, isSuccess: rootSuccess } = useWaitForTransactionReceipt({ hash: rootHash });
+  const { isLoading: cidConfirming, isSuccess: cidSuccess } = useWaitForTransactionReceipt({ hash: cidHash });
 
-  function setMerkleRoot(root: `0x${string}`, onSuccess?: () => void) {
-    writeContract({
+  // Auto-trigger setProofsCID after setMerkleRoot confirms on-chain
+  useEffect(() => {
+    if (rootSuccess && pendingCID && !cidHash) {
+      writeCID({
+        address: poolAddress,
+        abi: BracketPoolABI,
+        functionName: 'setProofsCID',
+        args: [pendingCID],
+      });
+    }
+  }, [rootSuccess, pendingCID, cidHash, writeCID, poolAddress]);
+
+  function setMerkleRoot(root: `0x${string}`) {
+    writeRoot({
       address: poolAddress,
       abi: BracketPoolABI,
       functionName: 'setMerkleRoot',
       args: [root],
-    }, onSuccess ? { onSuccess } : undefined);
+    });
   }
 
-  function setProofsCID(cid: string, onSuccess?: () => void) {
-    writeContract({
-      address: poolAddress,
-      abi: BracketPoolABI,
-      functionName: 'setProofsCID',
-      args: [cid],
-    }, onSuccess ? { onSuccess } : undefined);
-  }
+  const isPending = rootPending || cidPending;
+  const isConfirming = rootConfirming || cidConfirming;
+  const isSuccess = cidSuccess;
+  const error = rootError || cidError;
 
-  return { setMerkleRoot, setProofsCID, isPending, isConfirming, isSuccess, error };
+  return { setMerkleRoot, isPending, isConfirming, isSuccess, rootSuccess, error };
 }
 
 export function useCancelPool(poolAddress: `0x${string}`) {
