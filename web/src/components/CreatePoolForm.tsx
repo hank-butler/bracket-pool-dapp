@@ -5,8 +5,9 @@ import { parseUnits } from 'viem';
 import { useCreatePool } from '@/hooks/useAdminPool';
 
 const SPORTS = [
-  { label: 'March Madness', value: 'marchmadness', gameCount: 63 },
-  { label: 'World Cup', value: 'worldcup', gameCount: 88 },
+  { label: 'March Madness', value: 'marchmadness', gameCount: 63, prefix: 'mm:' },
+  { label: 'IPL', value: 'ipl', gameCount: 10, prefix: 'ipl:' },
+  { label: 'World Cup', value: 'worldcup', gameCount: 88, prefix: 'wc:' },
 ];
 
 export function CreatePoolForm() {
@@ -22,7 +23,7 @@ export function CreatePoolForm() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     createPool({
-      poolName,
+      poolName: `${sport.prefix}${poolName}`,
       gameCount: sport.gameCount,
       lockTime: Math.floor(new Date(lockTime).getTime() / 1000),
       finalizeDeadline: Math.floor(new Date(finalizeDeadline).getTime() / 1000),
@@ -36,7 +37,7 @@ export function CreatePoolForm() {
       <h2 className="text-lg mb-2">Create Pool</h2>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label className="block text-sm font-bold mb-1">Pool Name</label>
+          <label className="block text-sm font-bold mb-1">Pool Name <span className="font-normal text-gray-500">(stored as &quot;{sport.prefix}{poolName || '...'}&quot;)</span></label>
           <input className="input-90s w-full" value={poolName} onChange={e => setPoolName(e.target.value)} required />
         </div>
         <div>
