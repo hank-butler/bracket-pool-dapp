@@ -1,5 +1,6 @@
 /**
- * Pool type detection based on gameCount.
+ * Pool type detection based on poolName prefix.
+ * Format: "<prefix>:<display name>", e.g. "mm:March Madness 2026"
  * The contract is sport-agnostic — this mapping is purely a frontend concern.
  */
 
@@ -16,8 +17,8 @@ export interface PoolTypeConfig {
   picksUnit: string;
 }
 
-const POOL_TYPE_MAP: Record<number, PoolTypeConfig> = {
-  63: {
+export const POOL_TYPE_PREFIXES: Record<string, PoolTypeConfig> = {
+  'mm:': {
     type: 'bracket',
     sport: 'March Madness',
     label: 'NCAA Tournament Bracket',
@@ -27,7 +28,7 @@ const POOL_TYPE_MAP: Record<number, PoolTypeConfig> = {
     incompleteLabel: 'Pick all 63 games & set tiebreaker',
     picksUnit: 'games',
   },
-  10: {
+  'ipl:': {
     type: 'standings',
     sport: 'IPL',
     label: 'IPL Standings Prediction',
@@ -36,6 +37,16 @@ const POOL_TYPE_MAP: Record<number, PoolTypeConfig> = {
     submitLabel: 'Submit Prediction',
     incompleteLabel: 'Rank all 10 teams & set tiebreaker',
     picksUnit: 'positions',
+  },
+  'wc:': {
+    type: 'bracket',
+    sport: 'World Cup',
+    label: 'World Cup Bracket',
+    tiebreakerLabel: 'Predicted total goals in the Final',
+    tiebreakerPlaceholder: 'e.g. 3',
+    submitLabel: 'Submit Bracket',
+    incompleteLabel: 'Pick all games & set tiebreaker',
+    picksUnit: 'games',
   },
 };
 
@@ -50,6 +61,20 @@ const DEFAULT_CONFIG: PoolTypeConfig = {
   picksUnit: 'picks',
 };
 
-export function getPoolTypeConfig(gameCount: number): PoolTypeConfig {
-  return POOL_TYPE_MAP[gameCount] ?? DEFAULT_CONFIG;
+export function getPoolTypeConfig(poolName: string): PoolTypeConfig {
+  for (const prefix of Object.keys(POOL_TYPE_PREFIXES)) {
+    if (poolName.startsWith(prefix)) {
+      return POOL_TYPE_PREFIXES[prefix];
+    }
+  }
+  return DEFAULT_CONFIG;
+}
+
+export function stripPoolNamePrefix(poolName: string): string {
+  for (const prefix of Object.keys(POOL_TYPE_PREFIXES)) {
+    if (poolName.startsWith(prefix)) {
+      return poolName.slice(prefix.length);
+    }
+  }
+  return poolName;
 }
