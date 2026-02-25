@@ -24,6 +24,8 @@ Not blocking for March Madness 2025 launch (only one pool type deployed). Become
 2. **Pool name prefix convention** — Use the existing `poolName` string with a type prefix (e.g. `"mm:March Madness 2026"`). Frontend parses the prefix. Zero contract changes.
 3. **Frontend config mapping addresses to types** — Static config file mapping deployed pool addresses to their type. Simplest but requires manual sync at deploy time.
 
+**Status:** Resolved — 2026-02-24. Pool name prefix convention implemented. See `web/src/lib/poolTypes.ts`.
+
 ---
 
 ## 2. Frontend Lint Errors (Pre-existing)
