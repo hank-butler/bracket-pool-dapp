@@ -10,6 +10,7 @@ import { StepOpen } from '@/components/admin/StepOpen';
 import { StepPostResults } from '@/components/admin/StepPostResults';
 import { StepReviewFinalize } from '@/components/admin/StepReviewFinalize';
 import { StepFinalized } from '@/components/admin/StepFinalized';
+import { stripPoolNamePrefix } from '@/lib/poolTypes';
 
 export default function AdminPoolPage({ params }: { params: Promise<{ address: string }> }) {
   const { address } = use(params);
@@ -38,7 +39,7 @@ function AdminPoolWizard({ poolAddress }: { poolAddress: `0x${string}` }) {
         <div className="panel-90s p-4 mb-4 flex justify-between items-center">
           <div>
             <Link href="/admin" className="text-sm">← Back to Admin</Link>
-            <h1 className="text-2xl mt-1"><span className="star">★</span> {pool.poolName || 'Pool'}</h1>
+            <h1 className="text-2xl mt-1"><span className="star">★</span> {pool.poolName ? stripPoolNamePrefix(pool.poolName) : 'Pool'}</h1>
             <p className="text-xs mt-1">
               Status: <b>{status}</b> · {pool.entryCount} entries · ${formatUnits(pool.totalPoolValue, 6)} USDC
             </p>

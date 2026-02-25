@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { EntrySubmit } from '@/components/EntrySubmit';
 import { RefundEntry } from '@/components/RefundEntry';
 import { ClaimPrize } from '@/components/ClaimPrize';
+import { stripPoolNamePrefix } from '@/lib/poolTypes';
 
 export default function PoolPage({ params }: { params: Promise<{ address: string }> }) {
   const { address } = use(params);
@@ -41,7 +42,7 @@ export default function PoolPage({ params }: { params: Promise<{ address: string
             <div>
               <Link href="/">&larr; Back to Pools</Link>
               <h1 className="text-2xl mt-1">
-                <span className="star">&#9733;</span> {pool.poolName || 'Pool Details'}
+                <span className="star">&#9733;</span> {pool.poolName ? stripPoolNamePrefix(pool.poolName) : 'Pool Details'}
               </h1>
             </div>
             <WalletButton />

@@ -6,6 +6,7 @@ import { WalletButton } from '@/components/WalletButton';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { usePools, usePoolDetails, usePoolStatus } from '@/hooks/usePools';
 import { CreatePoolForm } from '@/components/CreatePoolForm';
+import { stripPoolNamePrefix } from '@/lib/poolTypes';
 
 const BADGE_CLASS: Record<string, string> = {
   Open: 'badge-open',
@@ -23,7 +24,7 @@ function AdminPoolRow({ address }: { address: `0x${string}` }) {
     <Link href={`/admin/pool/${address}`}>
       <div className="panel-90s p-3 hover:border-[3px] flex justify-between items-center">
         <div>
-          <p className="font-bold">{pool.poolName || 'Pool'}</p>
+          <p className="font-bold">{pool.poolName ? stripPoolNamePrefix(pool.poolName) : 'Pool'}</p>
           <p className="text-xs">{address.slice(0, 10)}...</p>
         </div>
         <div className="text-right text-sm">
