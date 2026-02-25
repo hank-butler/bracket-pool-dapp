@@ -12,12 +12,13 @@ import { getPoolTypeConfig } from '@/lib/poolTypes';
 
 interface StandingsPickerProps {
   gameCount: number;
+  poolName: string;
   onComplete: (picks: (`0x${string}` | null)[], tiebreaker: number) => void;
   disabled?: boolean;
 }
 
-export function StandingsPicker({ gameCount, onComplete, disabled }: StandingsPickerProps) {
-  const config = getPoolTypeConfig(gameCount);
+export function StandingsPicker({ gameCount, poolName, onComplete, disabled }: StandingsPickerProps) {
+  const config = getPoolTypeConfig(poolName);
   const [state, setState] = useState<StandingsState>(() => createEmptyStandingsState());
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);

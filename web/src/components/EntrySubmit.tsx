@@ -13,9 +13,10 @@ interface EntrySubmitProps {
   usdcAddress: `0x${string}`;
   currentPrice: bigint;
   gameCount: number;
+  poolName: string;
 }
 
-export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount }: EntrySubmitProps) {
+export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount, poolName }: EntrySubmitProps) {
   const { address } = useAccount();
   const {
     state,
@@ -46,7 +47,7 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount 
   );
 
   const isProcessing = state !== 'idle' && state !== 'success' && state !== 'error';
-  const poolConfig = getPoolTypeConfig(gameCount);
+  const poolConfig = getPoolTypeConfig(poolName);
 
   const PickerComponent = poolConfig.type === 'standings' ? StandingsPicker : BracketPicker;
 
@@ -79,6 +80,7 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount 
         <>
           <PickerComponent
             gameCount={gameCount}
+            poolName={poolName}
             onComplete={handleComplete}
             disabled={isProcessing}
           />

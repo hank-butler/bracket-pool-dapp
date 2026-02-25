@@ -30,6 +30,7 @@ const REGION_CLASS: Record<string, string> = {
 
 interface BracketPickerProps {
   gameCount: number;
+  poolName: string;
   onComplete: (picks: (`0x${string}` | null)[], tiebreaker: number) => void;
   disabled?: boolean;
 }
