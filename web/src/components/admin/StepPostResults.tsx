@@ -71,12 +71,6 @@ export function StepPostResults({ poolAddress, gameCount, onScorerComplete }: Pr
           <p className="text-sm mb-3">
             Paste a JSON array of {gameCount} team ID bytes32 values (one per game, in bracket order).
           </p>
-          <textarea
-            className="input-90s w-full h-32 font-mono text-xs"
-            placeholder={`["0x...", "0x...", ...] (${gameCount} values)`}
-            value={resultsJson}
-            onChange={e => setResultsJson(e.target.value)}
-          />
           <div className="mt-2 mb-2">
             <label className="btn-90s text-xs cursor-pointer">
               Load from file
