@@ -793,6 +793,87 @@ contract BracketPoolTest is Test {
         pool.sweepUnclaimed();
     }
 
+    // --- updateResults() ---
+
+    function test_updateResults_success() public {
+        bytes32[] memory results = _createPicks();
+        vm.warp(lockTime + 1);
+        vm.prank(admin);
+        pool.setResults(results);
+
+        bytes32[] memory corrected = new bytes32[](GAME_COUNT);
+        for (uint256 i = 0; i < GAME_COUNT; i++) {
+            corrected[i] = bytes32(uint256(GAME_COUNT - i));
+        }
+
+        vm.prank(admin);
+        pool.updateResults(corrected);
+
+        bytes32[] memory stored = pool.getGameResults();
+        assertEq(stored[0], corrected[0]);
+        assertEq(stored[GAME_COUNT - 1], corrected[GAME_COUNT - 1]);
+    }
+
+    function test_updateResults_emitsEvent() public {
+        bytes32[] memory results = _createPicks();
+        vm.warp(lockTime + 1);
+        vm.prank(admin);
+        pool.setResults(results);
+
+        bytes32[] memory corrected = new bytes32[](GAME_COUNT);
+        for (uint256 i = 0; i < GAME_COUNT; i++) {
+            corrected[i] = bytes32(uint256(GAME_COUNT - i));
+        }
+
+        vm.prank(admin);
+        vm.expectEmit(false, false, false, true);
+        emit BracketPool.ResultsUpdated(corrected);
+        pool.updateResults(corrected);
+    }
+
+    function test_updateResults_revert_notAdmin() public {
+        bytes32[] memory results = _createPicks();
+        vm.warp(lockTime + 1);
+        vm.prank(admin);
+        pool.setResults(results);
+
+        vm.prank(user1);
+        vm.expectRevert("Not authorized");
+        pool.updateResults(results);
+    }
+
+    function test_updateResults_revert_noResultsYet() public {
+        vm.warp(lockTime + 1);
+        bytes32[] memory results = _createPicks();
+
+        vm.prank(admin);
+        vm.expectRevert("No results to update");
+        pool.updateResults(results);
+    }
+
+    function test_updateResults_revert_alreadyFinalized() public {
+        _setupPoolForMerkleRoot();
+        vm.prank(admin);
+        pool.setMerkleRoot(bytes32(uint256(1)));
+
+        bytes32[] memory corrected = _createPicks();
+        vm.prank(admin);
+        vm.expectRevert("Already finalized");
+        pool.updateResults(corrected);
+    }
+
+    function test_updateResults_revert_wrongLength() public {
+        bytes32[] memory results = _createPicks();
+        vm.warp(lockTime + 1);
+        vm.prank(admin);
+        pool.setResults(results);
+
+        bytes32[] memory wrongLength = new bytes32[](10);
+        vm.prank(admin);
+        vm.expectRevert("Invalid results length");
+        pool.updateResults(wrongLength);
+    }
+
     // --- Fuzz Tests ---
 
     function testFuzz_enter_validPicks(uint256 tiebreaker) public {

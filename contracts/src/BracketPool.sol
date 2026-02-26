@@ -51,6 +51,7 @@ contract BracketPool is ReentrancyGuard {
     // --- Events ---
     event EntrySubmitted(uint256 indexed entryId, address indexed owner, bytes32[] picks, uint256 tiebreaker, uint256 pricePaid);
     event ResultsPosted(bytes32[] results);
+    event ResultsUpdated(bytes32[] results);
     event MerkleRootSet(bytes32 root);
     event FeePaid(address treasury, uint256 amount);
     event PrizeClaimed(uint256 indexed entryId, address indexed owner, uint256 amount);
@@ -151,6 +152,15 @@ contract BracketPool is ReentrancyGuard {
 
         gameResults = results;
         emit ResultsPosted(results);
+    }
+
+    function updateResults(bytes32[] calldata results) external {
+        require(msg.sender == admin, "Not authorized");
+        require(gameResults.length > 0, "No results to update");
+        require(merkleRoot == bytes32(0), "Already finalized");
+        require(results.length == gameCount, "Invalid results length");
+        gameResults = results;
+        emit ResultsUpdated(results);
     }
 
     // --- Merkle Root ---
