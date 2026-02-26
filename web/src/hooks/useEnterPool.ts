@@ -51,6 +51,30 @@ export function useEnterPool(
 
   const needsApproval = !allowance || allowance < price;
 
+  const submitEntry = useCallback(
+    (picks: `0x${string}`[], tiebreaker: number) => {
+      setState('entering');
+      writeEnter(
+        {
+          address: poolAddress,
+          abi: BracketPoolABI,
+          functionName: 'enter',
+          args: [picks, BigInt(tiebreaker)],
+        },
+        {
+          onSuccess: () => {
+            setState('waitingEntry');
+          },
+          onError: (err) => {
+            setError(err.message);
+            setState('error');
+          },
+        },
+      );
+    },
+    [writeEnter, poolAddress],
+  );
+
   const enter = useCallback(
     async (picks: `0x${string}`[], tiebreaker: number) => {
       setError(null);
@@ -83,31 +107,7 @@ export function useEnterPool(
         setState('error');
       }
     },
-    [needsApproval, writeApprove, usdcAddress, poolAddress, price],
-  );
-
-  const submitEntry = useCallback(
-    (picks: `0x${string}`[], tiebreaker: number) => {
-      setState('entering');
-      writeEnter(
-        {
-          address: poolAddress,
-          abi: BracketPoolABI,
-          functionName: 'enter',
-          args: [picks, BigInt(tiebreaker)],
-        },
-        {
-          onSuccess: () => {
-            setState('waitingEntry');
-          },
-          onError: (err) => {
-            setError(err.message);
-            setState('error');
-          },
-        },
-      );
-    },
-    [writeEnter, poolAddress],
+    [needsApproval, writeApprove, usdcAddress, poolAddress, price, submitEntry],
   );
 
   // Drive state transitions when tx receipts arrive

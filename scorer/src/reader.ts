@@ -10,14 +10,22 @@ export async function readEntries(
   poolAddress: Address,
   rpcUrl: string,
   chainId: number = 11155111, // Sepolia default
+  fromBlock?: bigint,
 ): Promise<RawEntry[]> {
   const chain = chainId === 1 ? mainnet : sepolia;
   const client = createPublicClient({ chain, transport: http(rpcUrl) });
 
+  let startBlock = fromBlock;
+  if (startBlock === undefined) {
+    const currentBlock = await client.getBlockNumber();
+    // Default: scan last ~30 days of blocks (216,000 blocks at ~12s each)
+    startBlock = currentBlock > 216000n ? currentBlock - 216000n : 0n;
+  }
+
   const logs = await client.getLogs({
     address: poolAddress,
     event: ENTRY_SUBMITTED_EVENT,
-    fromBlock: 0n,
+    fromBlock: startBlock,
     toBlock: 'latest',
   });
 

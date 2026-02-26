@@ -9,11 +9,18 @@ import Link from 'next/link';
 import { EntrySubmit } from '@/components/EntrySubmit';
 import { RefundEntry } from '@/components/RefundEntry';
 import { ClaimPrize } from '@/components/ClaimPrize';
+import { stripPoolNamePrefix } from '@/lib/poolTypes';
 
 export default function PoolPage({ params }: { params: Promise<{ address: string }> }) {
   const { address } = use(params);
+  const valid = isAddress(address);
+  const poolAddress = valid ? address as `0x${string}` : '0x0000000000000000000000000000000000000000' as `0x${string}`;
 
-  if (!isAddress(address)) {
+  const pool = usePoolDetails(poolAddress);
+  const { isLocked, isFinalized, status } = usePoolStatus(pool);
+  const { isConnected } = useAccount();
+
+  if (!valid) {
     return (
       <main className="min-h-screen p-8">
         <div className="max-w-4xl mx-auto">
@@ -24,14 +31,8 @@ export default function PoolPage({ params }: { params: Promise<{ address: string
     );
   }
 
-  const poolAddress = address as `0x${string}`;
-  const pool = usePoolDetails(poolAddress);
-  const { isLocked, isFinalized, status } = usePoolStatus(pool);
-  const { address: userAddress, isConnected } = useAccount();
-
   const showEntry = !isLocked && !pool.cancelled && !isFinalized;
   const showClaim = isFinalized && pool.proofsCID !== '';
-  const showRefund = true;
 
   return (
     <main className="min-h-screen p-8">
@@ -41,7 +42,7 @@ export default function PoolPage({ params }: { params: Promise<{ address: string
             <div>
               <Link href="/">&larr; Back to Pools</Link>
               <h1 className="text-2xl mt-1">
-                <span className="star">&#9733;</span> {pool.poolName || 'Pool Details'}
+                <span className="star">&#9733;</span> {pool.poolName ? stripPoolNamePrefix(pool.poolName) : 'Pool Details'}
               </h1>
             </div>
             <WalletButton />
@@ -71,14 +72,15 @@ export default function PoolPage({ params }: { params: Promise<{ address: string
               usdcAddress={pool.usdcAddress}
               currentPrice={pool.currentPrice}
               gameCount={pool.gameCount}
+              poolName={pool.poolName}
             />
           </div>
         )}
 
         {showEntry && !isConnected && (
           <div className="panel-90s p-4 mb-4">
-            <h2 className="text-lg mb-2">Submit Your Bracket</h2>
-            <p>Connect your wallet to submit a bracket entry.</p>
+            <h2 className="text-lg mb-2">Submit Your Entry</h2>
+            <p>Connect your wallet to submit an entry.</p>
           </div>
         )}
 

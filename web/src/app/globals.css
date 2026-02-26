@@ -307,3 +307,85 @@ code, pre {
 .badge-locked { background: #f7eeee; color: #8a4a4a; border: 1px solid #b38080; }
 .badge-finalized { background: #f2eef2; color: #6a4a6a; border: 1px solid #998099; }
 .badge-cancelled { background: #f7f2ee; color: #8a6a3a; border: 1px solid #b39966; }
+
+/* ═══════ STANDINGS PICKER (IPL etc.) ═══════ */
+.standings-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 2px outset var(--bg-button);
+  background: var(--bg-panel);
+  margin-bottom: 2px;
+  min-height: 32px;
+  font-size: 12px;
+}
+.standings-slot-dragover {
+  background: #e0e8ff;
+  border-color: var(--accent-navy);
+}
+.standings-slot-filled {
+  background: #f8f8f8;
+}
+
+.standings-rank {
+  font-weight: bold;
+  font-size: 11px;
+  color: var(--accent-navy);
+  min-width: 24px;
+  text-align: right;
+}
+
+.standings-team {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: grab;
+  padding: 2px 0;
+}
+.standings-team:active { cursor: grabbing; }
+
+.standings-team-abbr {
+  font-weight: bold;
+  font-size: 11px;
+  min-width: 36px;
+  color: var(--accent-navy);
+}
+
+.standings-team-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.standings-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--border-dark);
+  font-size: 10px;
+  padding: 0 4px;
+}
+.standings-remove:hover { color: var(--status-red); }
+
+.standings-empty {
+  color: var(--border-dark);
+  font-style: italic;
+  font-size: 11px;
+}
+
+.standings-available-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 2px outset var(--bg-button);
+  background: var(--bg-panel);
+  margin-bottom: 2px;
+  cursor: grab;
+  font-size: 12px;
+}
+.standings-available-team:hover { background: #e8e8e8; }
+.standings-available-team:active { cursor: grabbing; border-style: inset; }

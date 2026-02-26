@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { formatUnits } from 'viem';
 import { useClaim } from '@/hooks/useClaim';
@@ -27,10 +28,10 @@ export function ClaimPrize({ poolAddress, proofsCID, claimDeadline }: ClaimPrize
     reset,
   } = useClaim(poolAddress, proofsCID, address);
 
-  if (!proofsCID) return null;
-
-  const now = Date.now() / 1000;
+  const [now] = useState(() => Date.now() / 1000);
   const deadlinePassed = claimDeadline > 0 && now > claimDeadline;
+
+  if (!proofsCID) return null;
 
   if (fetching) {
     return (

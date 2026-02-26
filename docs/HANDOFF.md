@@ -1,46 +1,58 @@
-# Handoff — 2026-02-17 — HB
+# Handoff — 2026-02-24 — HB
 
-> **Author:** HB | **Date:** 2026-02-17
+> **Author:** HB | **Date:** 2026-02-24
 
 ## Project Status
 
-The MVP is fully deployed to Sepolia testnet with a live frontend on Vercel. A test pool has been created and a bracket entry successfully submitted via the live site. The full E2E cycle (scorer → Merkle root → claim) still needs to be completed once the test pool's lock time passes.
+The branch `feature/route-updates` is fully up to date after a complete March Madness E2E on Sepolia (post results → score → finalize → claim) and implementation of the pool name prefix convention for sport type detection. All three layers are green. The branch has not been pushed or PR'd yet.
 
 | Layer | Status | Tests |
 |-------|--------|-------|
 | Smart Contracts (Foundry) | Complete | 64 tests pass |
-| Off-Chain Scorer (TypeScript) | Complete | Pre-existing Node.js version issue (needs Node 16+) |
-| Frontend (Next.js + wagmi) | Complete | Live on Vercel, manually E2E verified |
+| Off-Chain Scorer (TypeScript) | Complete | 39 tests pass (5 files) |
+| Frontend (Next.js + wagmi) | Complete — build clean | 0 errors, 6 routes |
 
 ## What Was Done This Session
 
-- **Deployed frontend to Vercel** at `https://bracket-pool-dapp.vercel.app/`
-  - Root directory set to `web/`
-  - Env vars added to Vercel dashboard: `NEXT_PUBLIC_FACTORY_ADDRESS`, `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
-- **Fixed chain ordering bug** — wagmi config had `foundry` first, causing reads to default to localhost when no wallet connected; moved `sepolia` first (commit `9b40b2d`)
-- **Merged `feature/real-teams-2025` → `main`** via PR #3
-- **Created test pool on Sepolia** via `cast send` against the factory
-  - Pool address: `0x5eBca3ae0c84F597C922f3B0A8B2631b8049BCc3`
-  - Lock time: 2 hours after creation, Finalize deadline: 7 days
-  - Base price: 10 USDC, slope: 1%
-- **Successfully submitted a bracket entry** via the live Vercel site on Sepolia — full entry flow verified
+- **March Madness E2E on Sepolia (completed)** — Full cycle verified end-to-end on Sepolia:
+  - Created new MM pool with 2 entries (needed ≥ 2 for `MIN_ENTRIES` contract requirement)
+  - Posted game results via file upload (textarea removed — file upload only now)
+  - Ran scorer against Alchemy PAYG RPC (fixed fromBlock = rolling 30-day window)
+  - Fixed `useFinalize` hook — split into two separate `useWriteContract` instances chained via `useEffect`; the old shared instance silently dropped the `setProofsCID` call
+  - Finalized pool on-chain (setMerkleRoot + setProofsCID both confirmed)
+  - Verified claim flow — winning wallet successfully claimed prize
+  - Pinata IPFS integration confirmed working in Vercel preview environment
+
+- **Bug fixes committed during E2E:**
+  - `scorer/src/reader.ts` — changed `fromBlock: 0n` to rolling 30-day window (~216,000 blocks)
+  - `scorer/src/pipeline.ts` — added optional `fromBlock?: bigint` param
+  - `web/src/components/admin/StepPostResults.tsx` — removed broken textarea, file upload only
+  - `web/src/hooks/useAdminPool.ts` — split `useFinalize` into two independent write hooks
+
+- **Pool type detection refactor (5 tasks, all complete):**
+  - Replaced `gameCount` magic number mapping with `poolName` prefix convention (`mm:`, `ipl:`, `wc:`)
+  - `web/src/lib/poolTypes.ts` — new `getPoolTypeConfig(poolName: string)` + `stripPoolNamePrefix()`, full prefix registry
+  - `web/src/lib/poolTypes.test.ts` — 7 tests, all passing via `npm test`
+  - `web/src/components/EntrySubmit.tsx` — now takes `poolName` prop instead of deriving type from `gameCount`
+  - `web/src/components/CreatePoolForm.tsx` — IPL added to sports dropdown, prefix auto-prepended on submit, label hint shows stored format
+  - Display strings — `stripPoolNamePrefix()` applied in all three pages (pool detail, admin list, admin pool)
+  - `docs/issues.md` #1 marked resolved
+
+- **Added `npm test` script** to `web/package.json` → `vitest run`
 
 ## What's Next
 
-1. **Complete the Sepolia E2E cycle** — after pool lock time passes:
-   - Run scorer: `tsx src/index.ts <poolAddress> <rpcUrl> <tiebreaker>` from `scorer/`
-   - Post Merkle root via `cast send` or admin UI
-   - Claim prize via browser
-2. **Fix Node.js version** — scorer and `npm run build` require Node 16+; install via `nvm`
-3. **Production readiness** — security audit/peer review, mainnet deploy, Gnosis Safe multisig for admin/treasury, verify contracts on mainnet Etherscan
-4. **World Cup 2026 pivot** — Phase B (`sportId` in contracts), Phase C (shared sports config), Phase D (World Cup bracket picker UI). Design doc: `docs/plans/2025-02-10-world-cup-pivot-design.md`
+1. **Push and open PR** — `git push origin feature/route-updates`, then open PR → `main`. Branch has not been pushed yet.
+2. **March Madness 2025 team data** — update `web/src/lib/teams.ts` when the bracket is announced. Use the `/update-teams` slash command — it fetches from two sources, cross-references, and requires human approval before writing.
+3. **Production readiness** — security audit / peer review, mainnet deploy, Gnosis Safe 2-of-2 multisig for admin/treasury, Etherscan contract verification.
+4. **Frontend lint issues** (issue #2 in `docs/issues.md`) — 4 warnings remain (unused vars, missing dep array entry). Not blocking but worth cleaning up before mainnet.
 
 ## Current Branch State
 
-- **Branch:** `main`
-- **Pushed:** Yes, up to date with `origin/main`
+- **Branch:** `feature/route-updates`
+- **Pushed:** No — run `git push origin feature/route-updates` before opening PR
 - **Open PR:** None
-- **Uncommitted:** Only untracked files (`claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/screenshots/`) — none blocking
+- **Uncommitted files:** `claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/plans/2026-02-19-admin-ui-design.md`, `docs/plans/2026-02-19-admin-ui-implementation.md`, `docs/screenshots/` — all untracked, not blocking
 
 ## Local Development Setup
 
@@ -56,18 +68,24 @@ cd contracts
 export PATH="$HOME/.foundry/bin:$PATH"
 forge script script/DeployLocal.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
 # Note the Factory and MockUSDC addresses from output
+# Update web/.env.local with the new factory address
 
 # Terminal 3 — start frontend
-# Update web/.env.local with the factory address from deploy output
 cd web
-npm run dev
+npm run dev   # prebuild copies scorer source into web/src/scorer/
 # Open http://localhost:3000
+```
+
+To create a short-window pool for admin smoke testing:
+```bash
+cd contracts
+FACTORY_ADDRESS=<factory> ~/.foundry/bin/forge script script/CreateSmokeTestPool.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
 ```
 
 ### MetaMask Configuration
 
 - **Local (Anvil):** Network RPC `http://127.0.0.1:8545`, Chain ID `31337`; import Anvil account #0 key `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
-- **Sepolia:** Use the dedicated deployer wallet (not the Anvil key); get test USDC from faucet.circle.com
+- **Sepolia:** Use the dedicated deployer wallet; get test USDC from faucet.circle.com
 - Use Chrome/Brave (Safari doesn't support wallet extensions)
 
 ### Environment Files (not tracked by git)
@@ -84,26 +102,31 @@ ETHERSCAN_API_KEY=<Etherscan API key>
 **`web/.env.local`:**
 ```
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=<WalletConnect project ID>
-NEXT_PUBLIC_FACTORY_ADDRESS=0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd
+NEXT_PUBLIC_FACTORY_ADDRESS=0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd   # Sepolia
+PINATA_JWT=<Pinata JWT from app.pinata.cloud>
+SCORER_RPC_URL=<Alchemy Sepolia HTTPS URL>                # or http://127.0.0.1:8545 for local
 ```
 
 ### Sepolia Deployment
 
 - **Factory:** `0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd` (verified on Sepolia Etherscan)
-- **Test Pool:** `0x5eBca3ae0c84F597C922f3B0A8B2631b8049BCc3`
+- **Verified MM Test Pool:** Pool with 2 entries, finalized, claim verified ✓
 - **Frontend:** `https://bracket-pool-dapp.vercel.app/`
-- **USDC:** Circle Sepolia USDC at `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`
-- Deploy command: `source .env && forge script script/Deploy.s.sol --rpc-url sepolia --broadcast --verify` (from `contracts/`)
-- Create pool command: `source .env && cast send <factory> "createPool(string,uint256,uint256,uint256,uint256,uint256)" "<name>" 63 $(($(date +%s) + 7200)) $(($(date +%s) + 604800)) 10000000 100 --rpc-url $SEPOLIA_RPC_URL --private-key $PRIVATE_KEY`
+- **Branch Preview:** Vercel auto-deploys `feature/route-updates` at a preview URL
 
 ## Key Architecture Decisions
 
 - **63 games** (Round of 64 through Championship, no First Four), 6 rounds with doubling points (10/20/40/80/160/320)
-- **First Four handling** — play-in winners are resolved on the frontend before lock time, not picked by users. Lock time set to Thursday (R64 start)
 - **Hash-only storage** — contract stores `keccak256(picks)`, full picks emitted in events
 - **5% fee** via `totalPoolValue * 500 / 10000` (Solidity integer division)
-- **Merkle tree claims** — scorer generates tree, root posted on-chain, proofs hosted on IPFS
+- **Merkle tree claims** — scorer generates tree, root posted on-chain, proofs hosted on IPFS via Pinata
 - **Claim deadline** — `finalizeDeadline + 90 days`, then admin can sweep unclaimed funds
-- **Tiebreaker** — predicted championship total score, closest wins, ties split evenly
-- **Team data** — static config file in `web/src/lib/teams.ts`, updated via `/update-teams` slash command on Selection Sunday
-- **Sport-agnostic contracts** — `gameCount` is a parameter, World Cup will use `gameCount=88` with a future `sportId` field
+- **Tiebreaker** — predicted championship total score (MM) or total sixes (IPL), closest wins, ties split evenly
+- **Pool name prefix convention** — sport type encoded as prefix in `poolName`: `mm:`, `ipl:`, `wc:`. Frontend parses prefix via `getPoolTypeConfig(poolName)`. Old pools without prefix fall back to `DEFAULT_CONFIG`. No contract changes needed.
+- **Team data** — static config files in `web/src/lib/teams.ts` (MM) and `web/src/lib/ipl.ts` (IPL)
+- **Sport-agnostic contracts** — `gameCount` is a constructor parameter; pool type now determined by `poolName` prefix (not `gameCount`)
+- **IPL scoring** — position accuracy (max 100) + bonuses for champion (+20), runner-up (+10), top-4 (+5 each, max 20) = perfect score 150
+- **Scorer importability** — scorer source is copied into `web/src/scorer/` at build time (prebuild/predev scripts); not committed to git. Avoids Turbopack's restriction on importing files outside the project root.
+- **Admin access control** — wallet-based only; UI reads `factory.owner()` and gates all admin pages. Before mainnet: transfer ownership to Gnosis Safe 2-of-2.
+- **IPFS optional in local dev** — scorer API route skips Pinata and returns a placeholder CID when `PINATA_JWT` is not set, enabling full admin UI smoke testing without an IPFS account.
+- **Results input** — file upload only (textarea removed due to clipboard encoding issues with bytes32 arrays). Admin uploads a `.json` file containing a `bytes32[]` array of game results.

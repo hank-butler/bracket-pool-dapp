@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useReducer } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { BracketPoolABI } from '@/lib/contracts';
 
@@ -27,14 +27,35 @@ interface ScorerOutputJSON {
   proofs: Record<string, string[]>;
 }
 
+type FetchState = {
+  claimables: ClaimableEntry[];
+  fetching: boolean;
+  fetchError: string | null;
+};
+
+type FetchAction =
+  | { type: 'start' }
+  | { type: 'success'; claimables: ClaimableEntry[] }
+  | { type: 'error'; error: string };
+
+function fetchReducer(state: FetchState, action: FetchAction): FetchState {
+  switch (action.type) {
+    case 'start': return { ...state, fetching: true, fetchError: null };
+    case 'success': return { claimables: action.claimables, fetching: false, fetchError: null };
+    case 'error': return { claimables: [], fetching: false, fetchError: action.error };
+  }
+}
+
 export function useClaim(
   poolAddress: `0x${string}`,
   proofsCID: string,
   userAddress: `0x${string}` | undefined,
 ) {
-  const [claimables, setClaimables] = useState<ClaimableEntry[]>([]);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [fetching, setFetching] = useState(false);
+  const [{ claimables, fetching, fetchError }, dispatch] = useReducer(fetchReducer, {
+    claimables: [],
+    fetching: false,
+    fetchError: null,
+  });
   const [claimError, setClaimError] = useState<string | null>(null);
   const [claimingId, setClaimingId] = useState<number | null>(null);
 
@@ -46,14 +67,10 @@ export function useClaim(
 
   // Fetch proofs from IPFS
   useEffect(() => {
-    if (!proofsCID || !userAddress) {
-      setClaimables([]);
-      return;
-    }
+    if (!proofsCID || !userAddress) return;
 
     let cancelled = false;
-    setFetching(true);
-    setFetchError(null);
+    dispatch({ type: 'start' });
 
     fetch(`https://ipfs.io/ipfs/${proofsCID}`)
       .then((res) => {
@@ -67,19 +84,17 @@ export function useClaim(
           (e) => e.owner.toLowerCase() === userAddress.toLowerCase() && BigInt(e.prizeAmount) > BigInt(0),
         );
 
-        const result: ClaimableEntry[] = userEntries.map((e) => ({
+        const claimables: ClaimableEntry[] = userEntries.map((e) => ({
           entryId: e.entryId,
           prizeAmount: BigInt(e.prizeAmount),
           proof: (data.proofs[e.entryId.toString()] || []) as `0x${string}`[],
         }));
 
-        setClaimables(result);
-        setFetching(false);
+        dispatch({ type: 'success', claimables });
       })
       .catch((err) => {
         if (cancelled) return;
-        setFetchError(err instanceof Error ? err.message : 'Failed to fetch proofs');
-        setFetching(false);
+        dispatch({ type: 'error', error: err instanceof Error ? err.message : 'Failed to fetch proofs' });
       });
 
     return () => {
