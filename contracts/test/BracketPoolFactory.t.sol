@@ -22,7 +22,7 @@ contract BracketPoolFactoryTest is Test {
 
     function test_factory_initialization() public view {
         assertEq(factory.owner(), admin);
-        assertEq(factory.usdc(), address(usdc));
+        assertEq(factory.token(), address(usdc));
         assertEq(factory.treasury(), treasury);
         assertEq(factory.getPoolCount(), 0);
     }

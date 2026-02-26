@@ -5,17 +5,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./BracketPool.sol";
 
 contract BracketPoolFactory is Ownable {
-    address public immutable usdc;
+    address public immutable token;
     address public immutable treasury;
 
     address[] public pools;
 
     event PoolCreated(address indexed poolAddress, string poolName, uint256 gameCount);
 
-    constructor(address _usdc, address _treasury) Ownable(msg.sender) {
-        require(_usdc != address(0), "Invalid USDC");
+    constructor(address _token, address _treasury) Ownable(msg.sender) {
+        require(_token != address(0), "Invalid token");
         require(_treasury != address(0), "Invalid treasury");
-        usdc = _usdc;
+        token = _token;
         treasury = _treasury;
     }
 
@@ -28,7 +28,7 @@ contract BracketPoolFactory is Ownable {
         uint256 _priceSlope
     ) external onlyOwner returns (address) {
         BracketPool pool = new BracketPool(
-            usdc,
+            token,
             treasury,
             msg.sender,
             _poolName,

@@ -3,7 +3,7 @@
     "type": "constructor",
     "inputs": [
       {
-        "name": "_usdc",
+        "name": "_token",
         "type": "address",
         "internalType": "address"
       },
@@ -490,6 +490,19 @@
   },
   {
     "type": "function",
+    "name": "token",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IERC20"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "totalPoolValue",
     "inputs": [],
     "outputs": [
@@ -516,16 +529,16 @@
   },
   {
     "type": "function",
-    "name": "usdc",
-    "inputs": [],
-    "outputs": [
+    "name": "updateResults",
+    "inputs": [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IERC20"
+        "name": "results",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
       }
     ],
-    "stateMutability": "view"
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "event",
@@ -668,6 +681,19 @@
   {
     "type": "event",
     "name": "ResultsPosted",
+    "inputs": [
+      {
+        "name": "results",
+        "type": "bytes32[]",
+        "indexed": false,
+        "internalType": "bytes32[]"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ResultsUpdated",
     "inputs": [
       {
         "name": "results",

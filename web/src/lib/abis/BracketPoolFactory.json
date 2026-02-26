@@ -3,7 +3,7 @@
     "type": "constructor",
     "inputs": [
       {
-        "name": "_usdc",
+        "name": "_token",
         "type": "address",
         "internalType": "address"
       },
@@ -126,6 +126,19 @@
   },
   {
     "type": "function",
+    "name": "token",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "transferOwnership",
     "inputs": [
       {
@@ -140,19 +153,6 @@
   {
     "type": "function",
     "name": "treasury",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "usdc",
     "inputs": [],
     "outputs": [
       {

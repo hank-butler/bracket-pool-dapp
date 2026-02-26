@@ -42,7 +42,7 @@ contract BracketPoolTest is Test {
     }
 
     function test_initialization() public view {
-        assertEq(address(pool.usdc()), address(usdc));
+        assertEq(address(pool.token()), address(usdc));
         assertEq(pool.treasury(), treasury);
         assertEq(pool.admin(), admin);
         assertEq(pool.gameCount(), GAME_COUNT);
@@ -57,8 +57,8 @@ contract BracketPoolTest is Test {
         assertEq(pool.merkleRoot(), bytes32(0));
     }
 
-    function test_constructor_revert_zeroUsdc() public {
-        vm.expectRevert("Invalid USDC address");
+    function test_constructor_revert_zeroToken() public {
+        vm.expectRevert("Invalid token address");
         new BracketPool(address(0), treasury, admin, "Test", 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE);
     }
 

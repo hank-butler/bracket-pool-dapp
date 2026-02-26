@@ -33,7 +33,7 @@ export function usePoolDetails(address: `0x${string}`) {
       { address, abi: BracketPoolABI, functionName: 'cancelled' },
       { address, abi: BracketPoolABI, functionName: 'claimDeadline' },
       { address, abi: BracketPoolABI, functionName: 'finalizeDeadline' },
-      { address, abi: BracketPoolABI, functionName: 'usdc' },
+      { address, abi: BracketPoolABI, functionName: 'token' },
       { address, abi: BracketPoolABI, functionName: 'proofsCID' },
     ],
   });

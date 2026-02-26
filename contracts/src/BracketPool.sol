@@ -18,7 +18,7 @@ contract BracketPool is ReentrancyGuard {
     }
 
     // --- Immutables ---
-    IERC20 public immutable usdc;
+    IERC20 public immutable token;
     address public immutable treasury;
     address public immutable admin;
     uint256 public immutable gameCount;
@@ -62,7 +62,7 @@ contract BracketPool is ReentrancyGuard {
 
     // --- Constructor ---
     constructor(
-        address _usdc,
+        address _token,
         address _treasury,
         address _admin,
         string memory _poolName,
@@ -72,7 +72,7 @@ contract BracketPool is ReentrancyGuard {
         uint256 _basePrice,
         uint256 _priceSlope
     ) {
-        require(_usdc != address(0), "Invalid USDC address");
+        require(_token != address(0), "Invalid token address");
         require(_treasury != address(0), "Invalid treasury address");
         require(_admin != address(0), "Invalid admin address");
         require(_gameCount > 0, "Invalid game count");
@@ -80,7 +80,7 @@ contract BracketPool is ReentrancyGuard {
         require(_finalizeDeadline > _lockTime, "Deadline must be after lock");
         require(_basePrice > 0, "Invalid base price");
 
-        usdc = IERC20(_usdc);
+        token = IERC20(_token);
         treasury = _treasury;
         admin = _admin;
         poolName = _poolName;
@@ -114,7 +114,7 @@ contract BracketPool is ReentrancyGuard {
         require(picks.length == gameCount, "Invalid picks length");
 
         uint256 price = getCurrentPrice();
-        usdc.safeTransferFrom(msg.sender, address(this), price);
+        token.safeTransferFrom(msg.sender, address(this), price);
 
         uint256 entryId = entryCount;
         bytes32 picksHash = keccak256(abi.encodePacked(picks));
@@ -173,7 +173,7 @@ contract BracketPool is ReentrancyGuard {
         require(entryCount >= MIN_ENTRIES, "Not enough entries");
 
         uint256 fee = totalPoolValue * FEE_PERCENT / BASIS_POINTS;
-        usdc.safeTransfer(treasury, fee);
+        token.safeTransfer(treasury, fee);
 
         merkleRoot = root;
 
@@ -194,7 +194,7 @@ contract BracketPool is ReentrancyGuard {
         require(MerkleProof.verify(proof, merkleRoot, leaf), "Invalid proof");
 
         entryClaimed[entryId] = true;
-        usdc.safeTransfer(msg.sender, amount);
+        token.safeTransfer(msg.sender, amount);
 
         emit PrizeClaimed(entryId, msg.sender, amount);
     }
@@ -212,7 +212,7 @@ contract BracketPool is ReentrancyGuard {
         require(canRefund, "Refund not available");
 
         entryRefunded[entryId] = true;
-        usdc.safeTransfer(msg.sender, entries[entryId].pricePaid);
+        token.safeTransfer(msg.sender, entries[entryId].pricePaid);
 
         emit EntryRefunded(entryId, msg.sender, entries[entryId].pricePaid);
     }
@@ -236,10 +236,10 @@ contract BracketPool is ReentrancyGuard {
         require(block.timestamp >= claimDeadline, "Claim period not over");
         require(merkleRoot != bytes32(0), "Not finalized");
 
-        uint256 balance = usdc.balanceOf(address(this));
+        uint256 balance = token.balanceOf(address(this));
         require(balance > 0, "Nothing to sweep");
 
-        usdc.safeTransfer(treasury, balance);
+        token.safeTransfer(treasury, balance);
         emit UnclaimedSwept(treasury, balance);
     }
 }
