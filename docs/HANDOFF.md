@@ -1,57 +1,72 @@
-# Handoff — 2026-02-24 — HB
+# Handoff — 2026-02-25 — HB
 
-> **Author:** HB | **Date:** 2026-02-24
+> **Author:** HB | **Date:** 2026-02-25
 
 ## Project Status
 
-The branch `feature/route-updates` is fully up to date after a complete March Madness E2E on Sepolia (post results → score → finalize → claim) and implementation of the pool name prefix convention for sport type detection. All three layers are green. The branch has not been pushed or PR'd yet.
+The admin UI branch (`feature/route-updates`) was merged to `main` via PR #4 today. A new branch (`feature/contract-updates`) was cut and three World Cup launch-blocker contract changes were implemented and pushed. All three layers are green.
 
 | Layer | Status | Tests |
 |-------|--------|-------|
-| Smart Contracts (Foundry) | Complete | 64 tests pass |
-| Off-Chain Scorer (TypeScript) | Complete | 39 tests pass (5 files) |
-| Frontend (Next.js + wagmi) | Complete — build clean | 0 errors, 6 routes |
+| Smart Contracts (Foundry) | Complete — 3 new features | 73 tests pass |
+| Off-Chain Scorer (TypeScript) | Unchanged | 41 tests pass (6 files) |
+| Frontend (Next.js + wagmi) | Updated for new contract interface | Build clean, 6 routes |
 
 ## What Was Done This Session
 
-- **March Madness E2E on Sepolia (completed)** — Full cycle verified end-to-end on Sepolia:
-  - Created new MM pool with 2 entries (needed ≥ 2 for `MIN_ENTRIES` contract requirement)
-  - Posted game results via file upload (textarea removed — file upload only now)
-  - Ran scorer against Alchemy PAYG RPC (fixed fromBlock = rolling 30-day window)
-  - Fixed `useFinalize` hook — split into two separate `useWriteContract` instances chained via `useEffect`; the old shared instance silently dropped the `setProofsCID` call
-  - Finalized pool on-chain (setMerkleRoot + setProofsCID both confirmed)
-  - Verified claim flow — winning wallet successfully claimed prize
-  - Pinata IPFS integration confirmed working in Vercel preview environment
+- **Merged PR #4** (`feature/route-updates` → `main`) — full admin UI + pool type detection refactor. Updated PR description before merging to cover all work including the pool type detection refactor added after the PR was originally opened. Branch deleted after merge.
 
-- **Bug fixes committed during E2E:**
-  - `scorer/src/reader.ts` — changed `fromBlock: 0n` to rolling 30-day window (~216,000 blocks)
-  - `scorer/src/pipeline.ts` — added optional `fromBlock?: bigint` param
-  - `web/src/components/admin/StepPostResults.tsx` — removed broken textarea, file upload only
-  - `web/src/hooks/useAdminPool.ts` — split `useFinalize` into two independent write hooks
+- **Cut `feature/contract-updates`** — new branch for World Cup launch-blocker contract changes.
 
-- **Pool type detection refactor (5 tasks, all complete):**
-  - Replaced `gameCount` magic number mapping with `poolName` prefix convention (`mm:`, `ipl:`, `wc:`)
-  - `web/src/lib/poolTypes.ts` — new `getPoolTypeConfig(poolName: string)` + `stripPoolNamePrefix()`, full prefix registry
-  - `web/src/lib/poolTypes.test.ts` — 7 tests, all passing via `npm test`
-  - `web/src/components/EntrySubmit.tsx` — now takes `poolName` prop instead of deriving type from `gameCount`
-  - `web/src/components/CreatePoolForm.tsx` — IPL added to sports dropdown, prefix auto-prepended on submit, label hint shows stored format
-  - Display strings — `stripPoolNamePrefix()` applied in all three pages (pool detail, admin list, admin pool)
-  - `docs/issues.md` #1 marked resolved
+- **`updateResults()` — `fe525c3`**
+  - New function in `BracketPool.sol` allowing admin to correct results after `setResults()` but before `setMerkleRoot()` is called
+  - Guards: admin only, results must exist, not yet finalized, correct length
+  - New `ResultsUpdated` event emitted
+  - 6 new contract tests
 
-- **Added `npm test` script** to `web/package.json` → `vitest run`
+- **`usdc` → `token` rename — `aa09080`**
+  - `BracketPool.sol` + `BracketPoolFactory.sol`: immutable renamed, constructor param renamed, all internal calls updated
+  - `BracketPool.t.sol` + `BracketPoolFactory.t.sol`: existing tests updated
+  - `web/src/lib/abis/BracketPool.json` + `BracketPoolFactory.json`: regenerated from compiled output (includes `updateResults` and `ResultsUpdated` event)
+  - `web/src/hooks/usePools.ts`: `functionName: 'usdc'` → `functionName: 'token'`
+  - Deploy scripts updated (`DeployLocal.s.sol`, `CreateSmokeTestPool.s.sol`); also added `mm:` prefix to pool names in both scripts
+
+- **`maxEntries` cap — `2b048ed`**
+  - New `uint256 public immutable maxEntries` added to `BracketPool.sol` (0 = unlimited)
+  - `require(maxEntries == 0 || entryCount < maxEntries, "Pool is full")` in `enter()`
+  - Passed through `BracketPoolFactory.sol` `createPool()` as new final param
+  - `foundry.toml`: added `via_ir = true` to resolve stack-too-deep compiler error from constructor parameter count
+  - All constructor call sites updated in tests and deploy scripts
+  - `useCreatePool` hook and `CreatePoolForm.tsx` updated with `maxEntries` field (defaults to 0)
+  - 3 new contract tests
+
+- **Branch pushed** to `origin/feature/contract-updates` — no PR opened yet.
 
 ## What's Next
 
-1. **Push and open PR** — `git push origin feature/route-updates`, then open PR → `main`. Branch has not been pushed yet.
-2. **March Madness 2025 team data** — update `web/src/lib/teams.ts` when the bracket is announced. Use the `/update-teams` slash command — it fetches from two sources, cross-references, and requires human approval before writing.
-3. **Production readiness** — security audit / peer review, mainnet deploy, Gnosis Safe 2-of-2 multisig for admin/treasury, Etherscan contract verification.
-4. **Frontend lint issues** (issue #2 in `docs/issues.md`) — 4 warnings remain (unused vars, missing dep array entry). Not blocking but worth cleaning up before mainnet.
+World Cup launch blockers remaining (from `docs/future-ideas.md` §9):
+
+1. **L2 deployment (Base)** — Decision + deployment config. Contracts are fully compatible; it's a deployment target change only. No code changes needed. Decide network and update deploy scripts + Vercel env vars. Do this before further testnet work to avoid redoing it on L1.
+
+2. **Tiered payouts (60/25/15)** — Scorer-only change in `scorer/src/ranking.ts`. `distributePrizes()` currently pays rank-1 only; needs to pay top 3 with a configurable split. ~2–3 hrs including edge cases and tests. No contract changes needed.
+
+3. **World Cup scorer module** — New `wc-scoring.ts` with round-weighted points and a World Cup game structure file (48 teams, group stage + knockout). The key design question first: how to encode group stage picks as `bytes32[]`. Users predict which teams advance from each group, not individual match scores. ~4–6 hrs once the pick format is agreed on.
+
+4. **World Cup bracket picker UI** — The largest remaining item. Two distinct UIs needed: group stage (table/ranking per group, predict who advances) and knockout stage (16-team elimination bracket, similar to existing `BracketPicker.tsx`). Estimated 2–3 weeks. Must start by mid-March to leave buffer before June 11 kickoff.
+
+5. **Live leaderboard** — Partial scoring mode in the scorer + leaderboard API route + polling UI on pool detail page. ~1 week. Important for a 5-week tournament where users will disengage without standings.
+
+6. **Three entry tiers (Minnow/Shark/Whale)** — Zero code. Three `createPool` calls at deploy time with different `basePrice` values ($100/$1K/$10K USDC). Do on launch day.
+
+7. **March Madness 2025 team data** — Run `/update-teams` once the bracket is announced (Selection Sunday, mid-March). Updates `web/src/lib/teams.ts`.
+
+**Open question before starting World Cup scorer:** Define the pick encoding for the group stage. Each group has 6 teams; users predict which 2 (+ 3rd-place wildcard for R16) advance. This needs a `bytes32[]` encoding that the scorer can verify against posted results.
 
 ## Current Branch State
 
-- **Branch:** `feature/route-updates`
-- **Pushed:** No — run `git push origin feature/route-updates` before opening PR
-- **Open PR:** None
+- **Branch:** `feature/contract-updates`
+- **Pushed:** Yes — `origin/feature/contract-updates`
+- **Open PR:** None — not opened yet
 - **Uncommitted files:** `claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/plans/2026-02-19-admin-ui-design.md`, `docs/plans/2026-02-19-admin-ui-implementation.md`, `docs/screenshots/` — all untracked, not blocking
 
 ## Local Development Setup
@@ -102,17 +117,15 @@ ETHERSCAN_API_KEY=<Etherscan API key>
 **`web/.env.local`:**
 ```
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=<WalletConnect project ID>
-NEXT_PUBLIC_FACTORY_ADDRESS=0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd   # Sepolia
+NEXT_PUBLIC_FACTORY_ADDRESS=0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd   # Sepolia (stale — redeploy needed after contract changes)
 PINATA_JWT=<Pinata JWT from app.pinata.cloud>
 SCORER_RPC_URL=<Alchemy Sepolia HTTPS URL>                # or http://127.0.0.1:8545 for local
 ```
 
 ### Sepolia Deployment
 
-- **Factory:** `0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd` (verified on Sepolia Etherscan)
-- **Verified MM Test Pool:** Pool with 2 entries, finalized, claim verified ✓
+- **Factory (stale):** `0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd` — needs redeploy after `feature/contract-updates` is merged (contract ABI changed)
 - **Frontend:** `https://bracket-pool-dapp.vercel.app/`
-- **Branch Preview:** Vercel auto-deploys `feature/route-updates` at a preview URL
 
 ## Key Architecture Decisions
 
@@ -124,9 +137,14 @@ SCORER_RPC_URL=<Alchemy Sepolia HTTPS URL>                # or http://127.0.0.1:
 - **Tiebreaker** — predicted championship total score (MM) or total sixes (IPL), closest wins, ties split evenly
 - **Pool name prefix convention** — sport type encoded as prefix in `poolName`: `mm:`, `ipl:`, `wc:`. Frontend parses prefix via `getPoolTypeConfig(poolName)`. Old pools without prefix fall back to `DEFAULT_CONFIG`. No contract changes needed.
 - **Team data** — static config files in `web/src/lib/teams.ts` (MM) and `web/src/lib/ipl.ts` (IPL)
-- **Sport-agnostic contracts** — `gameCount` is a constructor parameter; pool type now determined by `poolName` prefix (not `gameCount`)
+- **Sport-agnostic contracts** — `gameCount` is a constructor parameter; pool type determined by `poolName` prefix (not `gameCount`)
 - **IPL scoring** — position accuracy (max 100) + bonuses for champion (+20), runner-up (+10), top-4 (+5 each, max 20) = perfect score 150
 - **Scorer importability** — scorer source is copied into `web/src/scorer/` at build time (prebuild/predev scripts); not committed to git. Avoids Turbopack's restriction on importing files outside the project root.
 - **Admin access control** — wallet-based only; UI reads `factory.owner()` and gates all admin pages. Before mainnet: transfer ownership to Gnosis Safe 2-of-2.
 - **IPFS optional in local dev** — scorer API route skips Pinata and returns a placeholder CID when `PINATA_JWT` is not set, enabling full admin UI smoke testing without an IPFS account.
 - **Results input** — file upload only (textarea removed due to clipboard encoding issues with bytes32 arrays). Admin uploads a `.json` file containing a `bytes32[]` array of game results.
+- **`token` not `usdc`** — The ERC20 payment token field is named `token` in both contracts (renamed this session). Allows any ERC20, not just USDC. Frontend and ABIs updated to match.
+- **`maxEntries`** — Optional entry cap on pools (0 = unlimited). Added this session. Cheap insurance against viral traffic overwhelming the scorer.
+- **`updateResults()`** — Admin can correct posted results before the Merkle root is set. Added this session. Eliminates the only path to a forced pool cancellation from a bad `setResults()` call.
+- **`via_ir = true`** — Enabled in `foundry.toml` to resolve stack-too-deep compiler error from `BracketPool` constructor parameter count. No functional impact.
+- **Sepolia factory needs redeploy** — The deployed factory at `0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd` uses the old contract ABI. Redeploy required after `feature/contract-updates` is merged.
