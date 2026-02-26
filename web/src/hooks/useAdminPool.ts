@@ -13,6 +13,7 @@ export function useCreatePool() {
     finalizeDeadline: number;
     basePrice: bigint;
     priceSlope: bigint;
+    maxEntries: number;
   }) {
     writeContract({
       address: FACTORY_ADDRESS,
@@ -25,6 +26,7 @@ export function useCreatePool() {
         BigInt(args.finalizeDeadline),
         args.basePrice,
         args.priceSlope,
+        BigInt(args.maxEntries),
       ],
     });
   }

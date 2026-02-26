@@ -17,6 +17,7 @@ export function CreatePoolForm() {
   const [finalizeDeadline, setFinalizeDeadline] = useState('');
   const [basePrice, setBasePrice] = useState('10');
   const [priceSlope, setPriceSlope] = useState('100');
+  const [maxEntries, setMaxEntries] = useState('0');
 
   const { createPool, isPending, isConfirming, isSuccess, error } = useCreatePool();
 
@@ -29,6 +30,7 @@ export function CreatePoolForm() {
       finalizeDeadline: Math.floor(new Date(finalizeDeadline).getTime() / 1000),
       basePrice: parseUnits(basePrice, 6),
       priceSlope: BigInt(priceSlope),
+      maxEntries: parseInt(maxEntries, 10),
     });
   }
 
@@ -90,6 +92,17 @@ export function CreatePoolForm() {
               type="number"
               value={priceSlope}
               onChange={e => setPriceSlope(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-bold mb-1">Max Entries <span className="font-normal text-gray-500">(0 = unlimited)</span></label>
+            <input
+              className="input-90s w-full"
+              type="number"
+              min="0"
+              value={maxEntries}
+              onChange={e => setMaxEntries(e.target.value)}
               required
             />
           </div>

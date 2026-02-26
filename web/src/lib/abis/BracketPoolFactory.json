@@ -48,6 +48,11 @@
         "name": "_priceSlope",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "_maxEntries",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [

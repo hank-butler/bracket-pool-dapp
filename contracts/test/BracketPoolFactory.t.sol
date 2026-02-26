@@ -35,7 +35,8 @@ contract BracketPoolFactoryTest is Test {
             block.timestamp + 7 days,
             block.timestamp + 37 days,
             10e6,
-            100
+            100,
+            0
         );
 
         assertTrue(poolAddr != address(0));
@@ -51,7 +52,7 @@ contract BracketPoolFactoryTest is Test {
     function test_createPool_adminIsCallerNotFactory() public {
         vm.prank(admin);
         address poolAddr = factory.createPool(
-            "Test Pool", 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100
+            "Test Pool", 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100, 0
         );
 
         BracketPool pool = BracketPool(poolAddr);
@@ -62,14 +63,14 @@ contract BracketPoolFactoryTest is Test {
     function test_createPool_revert_notOwner() public {
         vm.prank(address(99));
         vm.expectRevert();
-        factory.createPool("Test", 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100);
+        factory.createPool("Test", 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100, 0);
     }
 
     function test_createMultiplePools() public {
         vm.startPrank(admin);
-        factory.createPool("Pool 1", 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100);
-        factory.createPool("Pool 2", 67, block.timestamp + 14 days, block.timestamp + 44 days, 20e6, 50);
-        factory.createPool("Pool 3", 67, block.timestamp + 21 days, block.timestamp + 51 days, 5e6, 200);
+        factory.createPool("Pool 1", 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100, 0);
+        factory.createPool("Pool 2", 67, block.timestamp + 14 days, block.timestamp + 44 days, 20e6, 50, 0);
+        factory.createPool("Pool 3", 67, block.timestamp + 21 days, block.timestamp + 51 days, 5e6, 200, 0);
         vm.stopPrank();
 
         assertEq(factory.getPoolCount(), 3);
@@ -77,8 +78,8 @@ contract BracketPoolFactoryTest is Test {
 
     function test_getAllPools() public {
         vm.startPrank(admin);
-        address p1 = factory.createPool("Pool 1", 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100);
-        address p2 = factory.createPool("Pool 2", 67, block.timestamp + 14 days, block.timestamp + 44 days, 20e6, 50);
+        address p1 = factory.createPool("Pool 1", 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100, 0);
+        address p2 = factory.createPool("Pool 2", 67, block.timestamp + 14 days, block.timestamp + 44 days, 20e6, 50, 0);
         vm.stopPrank();
 
         address[] memory pools = factory.getAllPools();

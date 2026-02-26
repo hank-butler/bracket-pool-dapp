@@ -28,12 +28,13 @@ contract DeployLocalScript is Script {
         uint256 priceSlope = 0;    // flat pricing
 
         address pool = factory.createPool(
-            "March Madness 2026",
+            "mm:March Madness 2026",
             63,
             lockTime,
             finalizeDeadline,
             basePrice,
-            priceSlope
+            priceSlope,
+            0  // unlimited entries
         );
         console.log("Pool deployed at:", pool);
 

@@ -27,6 +27,7 @@ contract BracketPool is ReentrancyGuard {
     uint256 public immutable claimDeadline;
     uint256 public immutable basePrice;
     uint256 public immutable priceSlope;
+    uint256 public immutable maxEntries;
 
     // --- Constants ---
     uint256 public constant FEE_PERCENT = 500;
@@ -70,7 +71,8 @@ contract BracketPool is ReentrancyGuard {
         uint256 _lockTime,
         uint256 _finalizeDeadline,
         uint256 _basePrice,
-        uint256 _priceSlope
+        uint256 _priceSlope,
+        uint256 _maxEntries
     ) {
         require(_token != address(0), "Invalid token address");
         require(_treasury != address(0), "Invalid treasury address");
@@ -90,6 +92,7 @@ contract BracketPool is ReentrancyGuard {
         claimDeadline = _finalizeDeadline + 90 days;
         basePrice = _basePrice;
         priceSlope = _priceSlope;
+        maxEntries = _maxEntries;
     }
 
     // --- View Functions ---
@@ -112,6 +115,7 @@ contract BracketPool is ReentrancyGuard {
         require(block.timestamp < lockTime, "Pool is locked");
         require(!cancelled, "Pool is cancelled");
         require(picks.length == gameCount, "Invalid picks length");
+        require(maxEntries == 0 || entryCount < maxEntries, "Pool is full");
 
         uint256 price = getCurrentPrice();
         token.safeTransferFrom(msg.sender, address(this), price);

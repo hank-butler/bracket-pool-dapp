@@ -25,7 +25,8 @@ contract BracketPoolFactory is Ownable {
         uint256 _lockTime,
         uint256 _finalizeDeadline,
         uint256 _basePrice,
-        uint256 _priceSlope
+        uint256 _priceSlope,
+        uint256 _maxEntries
     ) external onlyOwner returns (address) {
         BracketPool pool = new BracketPool(
             token,
@@ -36,7 +37,8 @@ contract BracketPoolFactory is Ownable {
             _lockTime,
             _finalizeDeadline,
             _basePrice,
-            _priceSlope
+            _priceSlope,
+            _maxEntries
         );
 
         pools.push(address(pool));
