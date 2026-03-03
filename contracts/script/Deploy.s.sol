@@ -12,7 +12,9 @@ contract DeployScript is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        BracketPoolFactory factory = new BracketPoolFactory(usdc, treasury);
+        address[] memory initialTokens = new address[](1);
+        initialTokens[0] = usdc;
+        BracketPoolFactory factory = new BracketPoolFactory(treasury, initialTokens);
         console.log("Factory deployed at:", address(factory));
 
         vm.stopBroadcast();

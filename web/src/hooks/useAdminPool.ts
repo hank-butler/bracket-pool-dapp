@@ -7,24 +7,28 @@ export function useCreatePool() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   function createPool(args: {
+    token: `0x${string}`;
     poolName: string;
     gameCount: number;
     lockTime: number;
     finalizeDeadline: number;
     basePrice: bigint;
     priceSlope: bigint;
+    maxEntries: number;
   }) {
     writeContract({
       address: FACTORY_ADDRESS,
       abi: contracts.factory.abi,
       functionName: 'createPool',
       args: [
+        args.token,
         args.poolName,
         BigInt(args.gameCount),
         BigInt(args.lockTime),
         BigInt(args.finalizeDeadline),
         args.basePrice,
         args.priceSlope,
+        BigInt(args.maxEntries),
       ],
     });
   }
@@ -103,4 +107,36 @@ export function useSweepUnclaimed(poolAddress: `0x${string}`) {
   }
 
   return { sweepUnclaimed, isPending, isConfirming, isSuccess, error };
+}
+
+export function useAddToken() {
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  function addToken(tokenAddress: `0x${string}`) {
+    writeContract({
+      address: FACTORY_ADDRESS,
+      abi: contracts.factory.abi,
+      functionName: 'addToken',
+      args: [tokenAddress],
+    });
+  }
+
+  return { addToken, isPending, isConfirming, isSuccess, error };
+}
+
+export function useRemoveToken() {
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  function removeToken(tokenAddress: `0x${string}`) {
+    writeContract({
+      address: FACTORY_ADDRESS,
+      abi: contracts.factory.abi,
+      functionName: 'removeToken',
+      args: [tokenAddress],
+    });
+  }
+
+  return { removeToken, isPending, isConfirming, isSuccess, error };
 }

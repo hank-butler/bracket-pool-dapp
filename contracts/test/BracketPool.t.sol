@@ -34,7 +34,8 @@ contract BracketPoolTest is Test {
             lockTime,
             finalizeDeadline,
             BASE_PRICE,
-            PRICE_SLOPE
+            PRICE_SLOPE,
+            0  // unlimited
         );
 
         usdc.mint(user1, 10_000e6);
@@ -42,7 +43,7 @@ contract BracketPoolTest is Test {
     }
 
     function test_initialization() public view {
-        assertEq(address(pool.usdc()), address(usdc));
+        assertEq(address(pool.token()), address(usdc));
         assertEq(pool.treasury(), treasury);
         assertEq(pool.admin(), admin);
         assertEq(pool.gameCount(), GAME_COUNT);
@@ -57,39 +58,39 @@ contract BracketPoolTest is Test {
         assertEq(pool.merkleRoot(), bytes32(0));
     }
 
-    function test_constructor_revert_zeroUsdc() public {
-        vm.expectRevert("Invalid USDC address");
-        new BracketPool(address(0), treasury, admin, "Test", 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE);
+    function test_constructor_revert_zeroToken() public {
+        vm.expectRevert("Invalid token address");
+        new BracketPool(address(0), treasury, admin, "Test", 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
     }
 
     function test_constructor_revert_zeroTreasury() public {
         vm.expectRevert("Invalid treasury address");
-        new BracketPool(address(usdc), address(0), admin, "Test", 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE);
+        new BracketPool(address(usdc), address(0), admin, "Test", 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
     }
 
     function test_constructor_revert_zeroAdmin() public {
         vm.expectRevert("Invalid admin address");
-        new BracketPool(address(usdc), treasury, address(0), "Test", 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE);
+        new BracketPool(address(usdc), treasury, address(0), "Test", 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
     }
 
     function test_constructor_revert_lockInPast() public {
         vm.expectRevert("Lock time must be in future");
-        new BracketPool(address(usdc), treasury, admin, "Test", 67, block.timestamp - 1, finalizeDeadline, BASE_PRICE, PRICE_SLOPE);
+        new BracketPool(address(usdc), treasury, admin, "Test", 67, block.timestamp - 1, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
     }
 
     function test_constructor_revert_deadlineBeforeLock() public {
         vm.expectRevert("Deadline must be after lock");
-        new BracketPool(address(usdc), treasury, admin, "Test", 67, lockTime, lockTime - 1, BASE_PRICE, PRICE_SLOPE);
+        new BracketPool(address(usdc), treasury, admin, "Test", 67, lockTime, lockTime - 1, BASE_PRICE, PRICE_SLOPE, 0);
     }
 
     function test_constructor_revert_zeroBasePrice() public {
         vm.expectRevert("Invalid base price");
-        new BracketPool(address(usdc), treasury, admin, "Test", 67, lockTime, finalizeDeadline, 0, PRICE_SLOPE);
+        new BracketPool(address(usdc), treasury, admin, "Test", 67, lockTime, finalizeDeadline, 0, PRICE_SLOPE, 0);
     }
 
     function test_constructor_revert_zeroGameCount() public {
         vm.expectRevert("Invalid game count");
-        new BracketPool(address(usdc), treasury, admin, "Test", 0, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE);
+        new BracketPool(address(usdc), treasury, admin, "Test", 0, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
     }
 
     // --- getCurrentPrice ---
@@ -791,6 +792,150 @@ contract BracketPoolTest is Test {
         vm.prank(user1);
         vm.expectRevert("Not authorized");
         pool.sweepUnclaimed();
+    }
+
+    // --- updateResults() ---
+
+    function test_updateResults_success() public {
+        bytes32[] memory results = _createPicks();
+        vm.warp(lockTime + 1);
+        vm.prank(admin);
+        pool.setResults(results);
+
+        bytes32[] memory corrected = new bytes32[](GAME_COUNT);
+        for (uint256 i = 0; i < GAME_COUNT; i++) {
+            corrected[i] = bytes32(uint256(GAME_COUNT - i));
+        }
+
+        vm.prank(admin);
+        pool.updateResults(corrected);
+
+        bytes32[] memory stored = pool.getGameResults();
+        assertEq(stored[0], corrected[0]);
+        assertEq(stored[GAME_COUNT - 1], corrected[GAME_COUNT - 1]);
+    }
+
+    function test_updateResults_emitsEvent() public {
+        bytes32[] memory results = _createPicks();
+        vm.warp(lockTime + 1);
+        vm.prank(admin);
+        pool.setResults(results);
+
+        bytes32[] memory corrected = new bytes32[](GAME_COUNT);
+        for (uint256 i = 0; i < GAME_COUNT; i++) {
+            corrected[i] = bytes32(uint256(GAME_COUNT - i));
+        }
+
+        vm.prank(admin);
+        vm.expectEmit(false, false, false, true);
+        emit BracketPool.ResultsUpdated(corrected);
+        pool.updateResults(corrected);
+    }
+
+    function test_updateResults_revert_notAdmin() public {
+        bytes32[] memory results = _createPicks();
+        vm.warp(lockTime + 1);
+        vm.prank(admin);
+        pool.setResults(results);
+
+        vm.prank(user1);
+        vm.expectRevert("Not authorized");
+        pool.updateResults(results);
+    }
+
+    function test_updateResults_revert_noResultsYet() public {
+        vm.warp(lockTime + 1);
+        bytes32[] memory results = _createPicks();
+
+        vm.prank(admin);
+        vm.expectRevert("No results to update");
+        pool.updateResults(results);
+    }
+
+    function test_updateResults_revert_alreadyFinalized() public {
+        _setupPoolForMerkleRoot();
+        vm.prank(admin);
+        pool.setMerkleRoot(bytes32(uint256(1)));
+
+        bytes32[] memory corrected = _createPicks();
+        vm.prank(admin);
+        vm.expectRevert("Already finalized");
+        pool.updateResults(corrected);
+    }
+
+    function test_updateResults_revert_wrongLength() public {
+        bytes32[] memory results = _createPicks();
+        vm.warp(lockTime + 1);
+        vm.prank(admin);
+        pool.setResults(results);
+
+        bytes32[] memory wrongLength = new bytes32[](10);
+        vm.prank(admin);
+        vm.expectRevert("Invalid results length");
+        pool.updateResults(wrongLength);
+    }
+
+    // --- maxEntries ---
+
+    function test_maxEntries_zero_meansUnlimited() public {
+        // Default pool has maxEntries == 0 (unlimited)
+        assertEq(pool.maxEntries(), 0);
+    }
+
+    function test_maxEntries_rejects_when_full() public {
+        BracketPool cappedPool = new BracketPool(
+            address(usdc),
+            treasury,
+            admin,
+            "Capped Pool",
+            GAME_COUNT,
+            lockTime,
+            finalizeDeadline,
+            BASE_PRICE,
+            PRICE_SLOPE,
+            2  // maxEntries
+        );
+
+        bytes32[] memory picks = _createPicks();
+
+        vm.startPrank(user1);
+        usdc.approve(address(cappedPool), 10_000e6);
+        cappedPool.enter(picks, 100);
+        cappedPool.enter(picks, 101);
+        vm.stopPrank();
+
+        // Third entry should be rejected
+        vm.startPrank(user2);
+        usdc.approve(address(cappedPool), 10_000e6);
+        vm.expectRevert("Pool is full");
+        cappedPool.enter(picks, 102);
+        vm.stopPrank();
+    }
+
+    function test_maxEntries_unlimited_when_zero() public {
+        BracketPool unlimitedPool = new BracketPool(
+            address(usdc),
+            treasury,
+            admin,
+            "Unlimited Pool",
+            GAME_COUNT,
+            lockTime,
+            finalizeDeadline,
+            BASE_PRICE,
+            PRICE_SLOPE,
+            0  // 0 = unlimited
+        );
+
+        bytes32[] memory picks = _createPicks();
+        vm.startPrank(user1);
+        usdc.approve(address(unlimitedPool), 10_000e6);
+        // Should not revert after many entries
+        for (uint256 i = 0; i < 5; i++) {
+            unlimitedPool.enter(picks, i);
+        }
+        vm.stopPrank();
+
+        assertEq(unlimitedPool.entryCount(), 5);
     }
 
     // --- Fuzz Tests ---

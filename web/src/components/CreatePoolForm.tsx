@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { parseUnits } from 'viem';
+import { parseUnits, isAddress } from 'viem';
 import { useCreatePool } from '@/hooks/useAdminPool';
 
 const SPORTS = [
@@ -10,25 +10,35 @@ const SPORTS = [
   { label: 'World Cup', value: 'worldcup', gameCount: 88, prefix: 'wc:' },
 ];
 
+const KNOWN_STABLES = [
+  { label: 'USDC (Sepolia)', address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' },
+  { label: 'Custom address...', address: '' },
+];
+
 export function CreatePoolForm() {
   const [poolName, setPoolName] = useState('');
   const [sport, setSport] = useState(SPORTS[0]);
+  const [tokenAddress, setTokenAddress] = useState(KNOWN_STABLES[0].address);
   const [lockTime, setLockTime] = useState('');
   const [finalizeDeadline, setFinalizeDeadline] = useState('');
   const [basePrice, setBasePrice] = useState('10');
   const [priceSlope, setPriceSlope] = useState('100');
+  const [maxEntries, setMaxEntries] = useState('0');
 
   const { createPool, isPending, isConfirming, isSuccess, error } = useCreatePool();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!isAddress(tokenAddress)) { alert('Invalid token address'); return; }
     createPool({
+      token: tokenAddress as `0x${string}`,
       poolName: `${sport.prefix}${poolName}`,
       gameCount: sport.gameCount,
       lockTime: Math.floor(new Date(lockTime).getTime() / 1000),
       finalizeDeadline: Math.floor(new Date(finalizeDeadline).getTime() / 1000),
       basePrice: parseUnits(basePrice, 6),
       priceSlope: BigInt(priceSlope),
+      maxEntries: parseInt(maxEntries, 10),
     });
   }
 
@@ -51,6 +61,26 @@ export function CreatePoolForm() {
               <option key={s.value} value={s.value}>{s.label} ({s.gameCount} games)</option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className="block text-sm font-bold mb-1">Payment Token</label>
+          <select
+            className="input-90s w-full mb-1"
+            value={KNOWN_STABLES.find(s => s.address === tokenAddress)?.address ?? ''}
+            onChange={e => setTokenAddress(e.target.value)}
+          >
+            {KNOWN_STABLES.map(s => (
+              <option key={s.label} value={s.address}>{s.label}</option>
+            ))}
+          </select>
+          {!KNOWN_STABLES.find(s => s.address === tokenAddress && s.address !== '') && (
+            <input
+              className="input-90s w-full font-mono text-xs"
+              placeholder="0x..."
+              value={tokenAddress}
+              onChange={e => setTokenAddress(e.target.value)}
+            />
+          )}
         </div>
         <div>
           <label className="block text-sm font-bold mb-1">Lock Time</label>
@@ -90,6 +120,17 @@ export function CreatePoolForm() {
               type="number"
               value={priceSlope}
               onChange={e => setPriceSlope(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-bold mb-1">Max Entries <span className="font-normal text-gray-500">(0 = unlimited)</span></label>
+            <input
+              className="input-90s w-full"
+              type="number"
+              min="0"
+              value={maxEntries}
+              onChange={e => setMaxEntries(e.target.value)}
               required
             />
           </div>
