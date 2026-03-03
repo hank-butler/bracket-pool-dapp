@@ -18,7 +18,9 @@ contract DeployLocalScript is Script {
         console.log("MockUSDC deployed at:", address(usdc));
 
         // 2. Deploy Factory
-        BracketPoolFactory factory = new BracketPoolFactory(address(usdc), deployer);
+        address[] memory initialTokens = new address[](1);
+        initialTokens[0] = address(usdc);
+        BracketPoolFactory factory = new BracketPoolFactory(deployer, initialTokens);
         console.log("Factory deployed at:", address(factory));
 
         // 3. Create a test pool — locks 1 hour from now, finalize deadline 2 hours
@@ -28,6 +30,7 @@ contract DeployLocalScript is Script {
         uint256 priceSlope = 0;    // flat pricing
 
         address pool = factory.createPool(
+            address(usdc),
             "mm:March Madness 2026",
             63,
             lockTime,

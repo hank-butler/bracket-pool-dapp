@@ -15,6 +15,7 @@ contract CreateSmokeTestPool is Script {
         uint256 finalizeDeadline = block.timestamp + 1 days;
 
         address pool = BracketPoolFactory(factory).createPool(
+            vm.envAddress("TOKEN_ADDRESS"),
             "mm:Smoke Test Pool",
             63,
             lockTime,
