@@ -1,72 +1,62 @@
-# Handoff — 2026-02-25 — HB
+# Handoff — 2026-03-02 — HB
 
-> **Author:** HB | **Date:** 2026-02-25
+> **Author:** HB | **Date:** 2026-03-02
 
 ## Project Status
 
-The admin UI branch (`feature/route-updates`) was merged to `main` via PR #4 today. A new branch (`feature/contract-updates`) was cut and three World Cup launch-blocker contract changes were implemented and pushed. All three layers are green.
+PR #7 (`feature/contract-updates`) was completed and merged to main this session. It included three World Cup launch-blocker contract changes from the previous session plus a token allowlist added at Clayton's request. The Sepolia factory has been redeployed and verified. Vercel rebuild triggered. All three layers are green on main.
 
 | Layer | Status | Tests |
 |-------|--------|-------|
-| Smart Contracts (Foundry) | Complete — 3 new features | 73 tests pass |
+| Smart Contracts (Foundry) | Complete — 4 features this branch | 82 tests pass |
 | Off-Chain Scorer (TypeScript) | Unchanged | 41 tests pass (6 files) |
 | Frontend (Next.js + wagmi) | Updated for new contract interface | Build clean, 6 routes |
 
 ## What Was Done This Session
 
-- **Merged PR #4** (`feature/route-updates` → `main`) — full admin UI + pool type detection refactor. Updated PR description before merging to cover all work including the pool type detection refactor added after the PR was originally opened. Branch deleted after merge.
+- **Reviewed open PR #7** — Clayton requested changes: "We don't want to accept any ERC-20. Need some way to restrict to top stables."
 
-- **Cut `feature/contract-updates`** — new branch for World Cup launch-blocker contract changes.
+- **Added token allowlist to `BracketPoolFactory`** — `mapping(address => bool) public allowedTokens`, `addToken`/`removeToken` owner functions (with zero-address and not-in-allowlist guards), constructor seeded from `address[] memory initialTokens`. `createPool` takes `address _token` as first parameter with `require(allowedTokens[_token], "Token not allowed")` guard. Removing a token from the allowlist does not affect existing pools. 15 factory tests (82 total).
 
-- **`updateResults()` — `fe525c3`**
-  - New function in `BracketPool.sol` allowing admin to correct results after `setResults()` but before `setMerkleRoot()` is called
-  - Guards: admin only, results must exist, not yet finalized, correct length
-  - New `ResultsUpdated` event emitted
-  - 6 new contract tests
+- **Updated deploy scripts** — `Deploy.s.sol`, `DeployLocal.s.sol`, `CreateSmokeTestPool.s.sol` updated for new constructor and `createPool` signatures.
 
-- **`usdc` → `token` rename — `aa09080`**
-  - `BracketPool.sol` + `BracketPoolFactory.sol`: immutable renamed, constructor param renamed, all internal calls updated
-  - `BracketPool.t.sol` + `BracketPoolFactory.t.sol`: existing tests updated
-  - `web/src/lib/abis/BracketPool.json` + `BracketPoolFactory.json`: regenerated from compiled output (includes `updateResults` and `ResultsUpdated` event)
-  - `web/src/hooks/usePools.ts`: `functionName: 'usdc'` → `functionName: 'token'`
-  - Deploy scripts updated (`DeployLocal.s.sol`, `CreateSmokeTestPool.s.sol`); also added `mm:` prefix to pool names in both scripts
+- **Regenerated `BracketPoolFactory.json` ABI** — includes `allowedTokens`, `addToken`, `removeToken`, `TokenAdded`, `TokenRemoved`, updated `createPool`. `token()` view removed.
 
-- **`maxEntries` cap — `2b048ed`**
-  - New `uint256 public immutable maxEntries` added to `BracketPool.sol` (0 = unlimited)
-  - `require(maxEntries == 0 || entryCount < maxEntries, "Pool is full")` in `enter()`
-  - Passed through `BracketPoolFactory.sol` `createPool()` as new final param
-  - `foundry.toml`: added `via_ir = true` to resolve stack-too-deep compiler error from constructor parameter count
-  - All constructor call sites updated in tests and deploy scripts
-  - `useCreatePool` hook and `CreatePoolForm.tsx` updated with `maxEntries` field (defaults to 0)
-  - 3 new contract tests
+- **Frontend hooks** — `useAddToken` and `useRemoveToken` added to `useAdminPool.ts`. `useCreatePool` takes `token` as first arg.
 
-- **Branch pushed** to `origin/feature/contract-updates` — no PR opened yet.
+- **`CreatePoolForm`** — Payment Token dropdown added (Sepolia USDC pre-selected, "Custom address..." fallback for local dev with MockUSDC).
+
+- **Merged PR #7** — Clayton approved. Merged to main, branch deleted.
+
+- **Redeployed Sepolia factory** — New address: `0xac2bAA67cB2De97eab5e5E8cBD35aea2FD03b02e`. Verified on Etherscan. `NEXT_PUBLIC_FACTORY_ADDRESS` updated in Vercel. Rebuild triggered.
 
 ## What's Next
 
-World Cup launch blockers remaining (from `docs/future-ideas.md` §9):
+World Cup launch blockers remaining (priority order):
 
-1. **L2 deployment (Base)** — Decision + deployment config. Contracts are fully compatible; it's a deployment target change only. No code changes needed. Decide network and update deploy scripts + Vercel env vars. Do this before further testnet work to avoid redoing it on L1.
+1. **Tiered payouts (60/25/15)** — Scorer-only change in `scorer/src/ranking.ts`. `distributePrizes()` currently pays rank-1 only; needs to pay top 3 with a configurable split. ~2–3 hrs including edge cases and tests. No contract changes needed. Needed before any real-money pool launch.
 
-2. **Tiered payouts (60/25/15)** — Scorer-only change in `scorer/src/ranking.ts`. `distributePrizes()` currently pays rank-1 only; needs to pay top 3 with a configurable split. ~2–3 hrs including edge cases and tests. No contract changes needed.
+2. **World Cup scorer module** — New `wc-scoring.ts` with round-weighted points. Open design question first: how to encode group stage picks as `bytes32[]`. Each group has 6 teams; users predict which 2 (+ 3rd-place wildcard) advance. Once pick format is agreed, scoring and UI can proceed in parallel. ~4–6 hrs after format is decided.
 
-3. **World Cup scorer module** — New `wc-scoring.ts` with round-weighted points and a World Cup game structure file (48 teams, group stage + knockout). The key design question first: how to encode group stage picks as `bytes32[]`. Users predict which teams advance from each group, not individual match scores. ~4–6 hrs once the pick format is agreed on.
+3. **World Cup bracket picker UI** — Largest remaining item. Two distinct UIs: group stage (table/ranking per group) and knockout stage (16-team elimination bracket). Must start by mid-March to leave buffer before June 11 kickoff. Estimated 2–3 weeks.
 
-4. **World Cup bracket picker UI** — The largest remaining item. Two distinct UIs needed: group stage (table/ranking per group, predict who advances) and knockout stage (16-team elimination bracket, similar to existing `BracketPicker.tsx`). Estimated 2–3 weeks. Must start by mid-March to leave buffer before June 11 kickoff.
+4. **March Madness 2026 team data** — Run `/update-teams` after Selection Sunday (~March 15–16). Updates `web/src/lib/teams.ts`. Can't be done until the field is announced.
 
-5. **Live leaderboard** — Partial scoring mode in the scorer + leaderboard API route + polling UI on pool detail page. ~1 week. Important for a 5-week tournament where users will disengage without standings.
+5. **Live leaderboard** — Partial scoring mode in scorer + leaderboard API route + polling UI on pool detail page. ~1 week. Important for a 5-week tournament where users disengage without standings.
 
 6. **Three entry tiers (Minnow/Shark/Whale)** — Zero code. Three `createPool` calls at deploy time with different `basePrice` values ($100/$1K/$10K USDC). Do on launch day.
 
-7. **March Madness 2025 team data** — Run `/update-teams` once the bracket is announced (Selection Sunday, mid-March). Updates `web/src/lib/teams.ts`.
+7. **L2 deployment (Base)** — Contracts are fully compatible; it's a deployment target change only. Update deploy scripts + Vercel env vars when ready.
+
+**Minor follow-up:** "Base Price (USDC)" label in `CreatePoolForm` is hardcoded — should become token-agnostic in a cleanup pass once multi-token pools are in use.
 
 **Open question before starting World Cup scorer:** Define the pick encoding for the group stage. Each group has 6 teams; users predict which 2 (+ 3rd-place wildcard for R16) advance. This needs a `bytes32[]` encoding that the scorer can verify against posted results.
 
 ## Current Branch State
 
-- **Branch:** `feature/contract-updates`
-- **Pushed:** Yes — `origin/feature/contract-updates`
-- **Open PR:** None — not opened yet
+- **Branch:** `main`
+- **Pushed:** Yes — fully up to date with `origin/main`
+- **Open PRs:** None
 - **Uncommitted files:** `claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/plans/2026-02-19-admin-ui-design.md`, `docs/plans/2026-02-19-admin-ui-implementation.md`, `docs/screenshots/` — all untracked, not blocking
 
 ## Local Development Setup
@@ -94,12 +84,13 @@ npm run dev   # prebuild copies scorer source into web/src/scorer/
 To create a short-window pool for admin smoke testing:
 ```bash
 cd contracts
-FACTORY_ADDRESS=<factory> ~/.foundry/bin/forge script script/CreateSmokeTestPool.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+TOKEN_ADDRESS=<mockUSDC> FACTORY_ADDRESS=<factory> ~/.foundry/bin/forge script script/CreateSmokeTestPool.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
 ```
 
 ### MetaMask Configuration
 
 - **Local (Anvil):** Network RPC `http://127.0.0.1:8545`, Chain ID `31337`; import Anvil account #0 key `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+- **Admin UI locally:** The Payment Token dropdown defaults to Sepolia USDC — switch to "Custom address..." and paste in the MockUSDC address from the deploy output
 - **Sepolia:** Use the dedicated deployer wallet; get test USDC from faucet.circle.com
 - Use Chrome/Brave (Safari doesn't support wallet extensions)
 
@@ -117,15 +108,16 @@ ETHERSCAN_API_KEY=<Etherscan API key>
 **`web/.env.local`:**
 ```
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=<WalletConnect project ID>
-NEXT_PUBLIC_FACTORY_ADDRESS=0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd   # Sepolia (stale — redeploy needed after contract changes)
+NEXT_PUBLIC_FACTORY_ADDRESS=0xac2bAA67cB2De97eab5e5E8cBD35aea2FD03b02e   # Sepolia — deployed 2026-03-02
 PINATA_JWT=<Pinata JWT from app.pinata.cloud>
 SCORER_RPC_URL=<Alchemy Sepolia HTTPS URL>                # or http://127.0.0.1:8545 for local
 ```
 
 ### Sepolia Deployment
 
-- **Factory (stale):** `0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd` — needs redeploy after `feature/contract-updates` is merged (contract ABI changed)
+- **Factory (current):** `0xac2bAA67cB2De97eab5e5E8cBD35aea2FD03b02e` — deployed 2026-03-02, verified on Etherscan
 - **Frontend:** `https://bracket-pool-dapp.vercel.app/`
+- **No pools exist yet on the new factory** — go to `/admin` on the live site, connect the deployer wallet (Sepolia), and create one. Sepolia USDC (`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`) is already on the allowlist from the deploy.
 
 ## Key Architecture Decisions
 
@@ -143,8 +135,8 @@ SCORER_RPC_URL=<Alchemy Sepolia HTTPS URL>                # or http://127.0.0.1:
 - **Admin access control** — wallet-based only; UI reads `factory.owner()` and gates all admin pages. Before mainnet: transfer ownership to Gnosis Safe 2-of-2.
 - **IPFS optional in local dev** — scorer API route skips Pinata and returns a placeholder CID when `PINATA_JWT` is not set, enabling full admin UI smoke testing without an IPFS account.
 - **Results input** — file upload only (textarea removed due to clipboard encoding issues with bytes32 arrays). Admin uploads a `.json` file containing a `bytes32[]` array of game results.
-- **`token` not `usdc`** — The ERC20 payment token field is named `token` in both contracts (renamed this session). Allows any ERC20, not just USDC. Frontend and ABIs updated to match.
-- **`maxEntries`** — Optional entry cap on pools (0 = unlimited). Added this session. Cheap insurance against viral traffic overwhelming the scorer.
-- **`updateResults()`** — Admin can correct posted results before the Merkle root is set. Added this session. Eliminates the only path to a forced pool cancellation from a bad `setResults()` call.
+- **`token` not `usdc`** — The ERC20 payment token field is named `token` in both contracts. Allows any ERC20, not just USDC. Frontend and ABIs updated to match.
+- **Token allowlist** — `BracketPoolFactory` has `mapping(address => bool) public allowedTokens`. Owner calls `addToken`/`removeToken`. Constructor seeded with `address[] memory initialTokens`. `createPool` requires token to be on allowlist. Removing a token does not affect existing pools.
+- **`maxEntries`** — Optional entry cap on pools (0 = unlimited). Cheap insurance against viral traffic overwhelming the scorer.
+- **`updateResults()`** — Admin can correct posted results before the Merkle root is set. Eliminates the only path to a forced pool cancellation from a bad `setResults()` call.
 - **`via_ir = true`** — Enabled in `foundry.toml` to resolve stack-too-deep compiler error from `BracketPool` constructor parameter count. No functional impact.
-- **Sepolia factory needs redeploy** — The deployed factory at `0x93a9e45C2aF7D6b858F54CFd70cD2a677552Cedd` uses the old contract ABI. Redeploy required after `feature/contract-updates` is merged.
