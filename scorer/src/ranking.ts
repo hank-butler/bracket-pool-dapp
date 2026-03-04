@@ -58,12 +58,13 @@ export function distributePrizes(rankedEntries: ScoredEntry[], prizePool: bigint
 
   for (let i = 0; i < paidRanks.length; i++) {
     const tierEntries = result.filter(e => e.rank === paidRanks[i]);
+    tierEntries.sort((a, b) => a.entryId - b.entryId);
     const tierPool = tierPools[i];
     const prizeEach = tierPool / BigInt(tierEntries.length);
     const dust = tierPool - prizeEach * BigInt(tierEntries.length);
 
-    // tierEntries are sorted by entryId asc (rankEntries sorts deterministically),
-    // so index 0 is the lowest entryId and receives the intra-tier dust.
+    // Sort by entryId asc so index 0 is deterministically the lowest entryId,
+    // which receives the intra-tier dust.
     tierEntries.forEach((e, j) => {
       e.prizeAmount = prizeEach + (j === 0 ? dust : 0n);
     });
