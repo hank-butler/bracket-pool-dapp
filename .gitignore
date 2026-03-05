@@ -21,3 +21,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Docs (HANDOFF.md is tracked; everything else is local only)
+docs/**
+!docs/HANDOFF.md
