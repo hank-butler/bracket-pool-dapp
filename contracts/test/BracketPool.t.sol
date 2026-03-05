@@ -19,17 +19,25 @@ contract BracketPoolTest is Test {
     uint256 public constant PRICE_SLOPE = 100;
     uint256 public lockTime;
     uint256 public finalizeDeadline;
+    uint16[] internal defaultPayoutBps;
 
     function setUp() public {
         usdc = new MockUSDC();
         lockTime = block.timestamp + 7 days;
         finalizeDeadline = lockTime + 30 days;
 
+        defaultPayoutBps = new uint16[](3);
+        defaultPayoutBps[0] = 6000;
+        defaultPayoutBps[1] = 2500;
+        defaultPayoutBps[2] = 1500;
+
         pool = new BracketPool(
             address(usdc),
             treasury,
             admin,
             "March Madness 2025",
+            "mm",
+            defaultPayoutBps,
             GAME_COUNT,
             lockTime,
             finalizeDeadline,
@@ -60,37 +68,37 @@ contract BracketPoolTest is Test {
 
     function test_constructor_revert_zeroToken() public {
         vm.expectRevert("Invalid token address");
-        new BracketPool(address(0), treasury, admin, "Test", 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
+        new BracketPool(address(0), treasury, admin, "Test", "mm", defaultPayoutBps, 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
     }
 
     function test_constructor_revert_zeroTreasury() public {
         vm.expectRevert("Invalid treasury address");
-        new BracketPool(address(usdc), address(0), admin, "Test", 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
+        new BracketPool(address(usdc), address(0), admin, "Test", "mm", defaultPayoutBps, 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
     }
 
     function test_constructor_revert_zeroAdmin() public {
         vm.expectRevert("Invalid admin address");
-        new BracketPool(address(usdc), treasury, address(0), "Test", 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
+        new BracketPool(address(usdc), treasury, address(0), "Test", "mm", defaultPayoutBps, 67, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
     }
 
     function test_constructor_revert_lockInPast() public {
         vm.expectRevert("Lock time must be in future");
-        new BracketPool(address(usdc), treasury, admin, "Test", 67, block.timestamp - 1, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
+        new BracketPool(address(usdc), treasury, admin, "Test", "mm", defaultPayoutBps, 67, block.timestamp - 1, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
     }
 
     function test_constructor_revert_deadlineBeforeLock() public {
         vm.expectRevert("Deadline must be after lock");
-        new BracketPool(address(usdc), treasury, admin, "Test", 67, lockTime, lockTime - 1, BASE_PRICE, PRICE_SLOPE, 0);
+        new BracketPool(address(usdc), treasury, admin, "Test", "mm", defaultPayoutBps, 67, lockTime, lockTime - 1, BASE_PRICE, PRICE_SLOPE, 0);
     }
 
     function test_constructor_revert_zeroBasePrice() public {
         vm.expectRevert("Invalid base price");
-        new BracketPool(address(usdc), treasury, admin, "Test", 67, lockTime, finalizeDeadline, 0, PRICE_SLOPE, 0);
+        new BracketPool(address(usdc), treasury, admin, "Test", "mm", defaultPayoutBps, 67, lockTime, finalizeDeadline, 0, PRICE_SLOPE, 0);
     }
 
     function test_constructor_revert_zeroGameCount() public {
         vm.expectRevert("Invalid game count");
-        new BracketPool(address(usdc), treasury, admin, "Test", 0, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
+        new BracketPool(address(usdc), treasury, admin, "Test", "mm", defaultPayoutBps, 0, lockTime, finalizeDeadline, BASE_PRICE, PRICE_SLOPE, 0);
     }
 
     // --- getCurrentPrice ---
@@ -888,6 +896,8 @@ contract BracketPoolTest is Test {
             treasury,
             admin,
             "Capped Pool",
+            "mm",
+            defaultPayoutBps,
             GAME_COUNT,
             lockTime,
             finalizeDeadline,
@@ -918,6 +928,8 @@ contract BracketPoolTest is Test {
             treasury,
             admin,
             "Unlimited Pool",
+            "mm",
+            defaultPayoutBps,
             GAME_COUNT,
             lockTime,
             finalizeDeadline,
@@ -968,5 +980,40 @@ contract BracketPoolTest is Test {
             assertGe(newPrice, lastPrice);
             lastPrice = newPrice;
         }
+    }
+
+    // --- sportId + payoutBps ---
+
+    function test_sportId_stored() public view {
+        assertEq(pool.sportId(), "mm");
+    }
+
+    function test_payoutBps_stored() public view {
+        uint16[] memory bps = pool.getPayoutBps();
+        assertEq(bps.length, 3);
+        assertEq(bps[0], 6000);
+        assertEq(bps[1], 2500);
+        assertEq(bps[2], 1500);
+    }
+
+    function test_constructor_revert_payoutBpsNotSumTo10000() public {
+        uint16[] memory badBps = new uint16[](2);
+        badBps[0] = 5000;
+        badBps[1] = 4000; // sums to 9000, not 10000
+        vm.expectRevert("Payouts must sum to 10000");
+        new BracketPool(
+            address(usdc),
+            treasury,
+            admin,
+            "mm:Test Pool",
+            "mm",
+            badBps,
+            63,
+            lockTime,
+            finalizeDeadline,
+            BASE_PRICE,
+            PRICE_SLOPE,
+            0
+        );
     }
 }
