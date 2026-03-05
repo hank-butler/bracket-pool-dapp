@@ -14,6 +14,7 @@ contract BracketPoolFactoryTest is Test {
 
     address public admin = address(1);
     address public treasury = address(2);
+    uint16[] internal defaultBps;
 
     function setUp() public {
         usdc = new MockUSDC();
@@ -21,6 +22,11 @@ contract BracketPoolFactoryTest is Test {
 
         address[] memory initialTokens = new address[](1);
         initialTokens[0] = address(usdc);
+
+        defaultBps = new uint16[](3);
+        defaultBps[0] = 6000;
+        defaultBps[1] = 2500;
+        defaultBps[2] = 1500;
 
         vm.prank(admin);
         factory = new BracketPoolFactory(treasury, initialTokens);
@@ -85,6 +91,8 @@ contract BracketPoolFactoryTest is Test {
         factory.createPool(
             address(usdt),
             "Test Pool",
+            "mm",
+            defaultBps,
             67,
             block.timestamp + 7 days,
             block.timestamp + 37 days,
@@ -99,6 +107,8 @@ contract BracketPoolFactoryTest is Test {
         address poolAddr = factory.createPool(
             address(usdc),
             "mm:March Madness 2026",
+            "mm",
+            defaultBps,
             63,
             block.timestamp + 7 days,
             block.timestamp + 37 days,
@@ -121,6 +131,8 @@ contract BracketPoolFactoryTest is Test {
         factory.createPool(
             address(usdc),
             "Another Pool",
+            "mm",
+            defaultBps,
             63,
             block.timestamp + 7 days,
             block.timestamp + 37 days,
@@ -137,6 +149,8 @@ contract BracketPoolFactoryTest is Test {
         address poolAddr = factory.createPool(
             address(usdc),
             "mm:March Madness 2026",
+            "mm",
+            defaultBps,
             67,
             block.timestamp + 7 days,
             block.timestamp + 37 days,
@@ -161,6 +175,8 @@ contract BracketPoolFactoryTest is Test {
         address poolAddr = factory.createPool(
             address(usdc),
             "Test Pool",
+            "mm",
+            defaultBps,
             67,
             block.timestamp + 7 days,
             block.timestamp + 37 days,
@@ -177,14 +193,14 @@ contract BracketPoolFactoryTest is Test {
     function test_createPool_revert_notOwner() public {
         vm.prank(address(99));
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(99)));
-        factory.createPool(address(usdc), "Test", 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100, 0);
+        factory.createPool(address(usdc), "Test", "mm", defaultBps, 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100, 0);
     }
 
     function test_createMultiplePools() public {
         vm.startPrank(admin);
-        factory.createPool(address(usdc), "Pool 1", 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100, 0);
-        factory.createPool(address(usdc), "Pool 2", 67, block.timestamp + 14 days, block.timestamp + 44 days, 20e6, 50, 0);
-        factory.createPool(address(usdc), "Pool 3", 67, block.timestamp + 21 days, block.timestamp + 51 days, 5e6, 200, 0);
+        factory.createPool(address(usdc), "Pool 1", "mm", defaultBps, 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100, 0);
+        factory.createPool(address(usdc), "Pool 2", "mm", defaultBps, 67, block.timestamp + 14 days, block.timestamp + 44 days, 20e6, 50, 0);
+        factory.createPool(address(usdc), "Pool 3", "mm", defaultBps, 67, block.timestamp + 21 days, block.timestamp + 51 days, 5e6, 200, 0);
         vm.stopPrank();
 
         assertEq(factory.getPoolCount(), 3);
@@ -192,13 +208,34 @@ contract BracketPoolFactoryTest is Test {
 
     function test_getAllPools() public {
         vm.startPrank(admin);
-        address p1 = factory.createPool(address(usdc), "Pool 1", 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100, 0);
-        address p2 = factory.createPool(address(usdc), "Pool 2", 67, block.timestamp + 14 days, block.timestamp + 44 days, 20e6, 50, 0);
+        address p1 = factory.createPool(address(usdc), "Pool 1", "mm", defaultBps, 67, block.timestamp + 7 days, block.timestamp + 37 days, 10e6, 100, 0);
+        address p2 = factory.createPool(address(usdc), "Pool 2", "mm", defaultBps, 67, block.timestamp + 14 days, block.timestamp + 44 days, 20e6, 50, 0);
         vm.stopPrank();
 
         address[] memory allPools = factory.getAllPools();
         assertEq(allPools.length, 2);
         assertEq(allPools[0], p1);
         assertEq(allPools[1], p2);
+    }
+
+    function test_createPool_withSportIdAndPayouts() public {
+        uint16[] memory bps = new uint16[](1);
+        bps[0] = 10000;
+        vm.prank(admin);
+        address poolAddr = factory.createPool(
+            address(usdc),
+            "wc:World Cup Pool",
+            "wc",
+            bps,
+            88,
+            block.timestamp + 1 days,
+            block.timestamp + 2 days,
+            10_000_000,
+            100,
+            0
+        );
+        BracketPool pool = BracketPool(poolAddr);
+        assertEq(pool.sportId(), "wc");
+        assertEq(pool.getPayoutBps()[0], 10000);
     }
 }

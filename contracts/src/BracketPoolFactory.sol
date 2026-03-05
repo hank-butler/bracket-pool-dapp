@@ -40,6 +40,8 @@ contract BracketPoolFactory is Ownable {
     function createPool(
         address _token,
         string calldata _poolName,
+        string calldata _sportId,
+        uint16[] calldata __payoutBps,
         uint256 _gameCount,
         uint256 _lockTime,
         uint256 _finalizeDeadline,
@@ -54,6 +56,8 @@ contract BracketPoolFactory is Ownable {
             treasury,
             msg.sender,
             _poolName,
+            _sportId,
+            __payoutBps,
             _gameCount,
             _lockTime,
             _finalizeDeadline,
