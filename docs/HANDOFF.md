@@ -1,46 +1,35 @@
-# Handoff — 2026-03-02 — HB
+# Handoff — 2026-03-04 — HB
 
-> **Author:** HB | **Date:** 2026-03-02
+> **Author:** HB | **Date:** 2026-03-04
 
 ## Project Status
 
-PR #7 (`feature/contract-updates`) was completed and merged to main this session. It included three World Cup launch-blocker contract changes from the previous session plus a token allowlist added at Clayton's request. The Sepolia factory has been redeployed and verified. Vercel rebuild triggered. All three layers are green on main.
+Tiered payouts (60/25/15) are implemented in the scorer and an open PR is awaiting review. All three layers are green. The next major unlock is deciding the World Cup group stage pick encoding, which unblocks the scorer module and UI work.
 
 | Layer | Status | Tests |
 |-------|--------|-------|
-| Smart Contracts (Foundry) | Complete — 4 features this branch | 82 tests pass |
-| Off-Chain Scorer (TypeScript) | Unchanged | 41 tests pass (6 files) |
-| Frontend (Next.js + wagmi) | Updated for new contract interface | Build clean, 6 routes |
+| Smart Contracts (Foundry) | Unchanged from last session | 82 tests pass |
+| Off-Chain Scorer (TypeScript) | Tiered payouts complete — PR #8 open | 50 tests pass (6 files) |
+| Frontend (Next.js + wagmi) | Unchanged from last session | Build clean, 6 routes |
 
 ## What Was Done This Session
 
-- **Reviewed open PR #7** — Clayton requested changes: "We don't want to accept any ERC-20. Need some way to restrict to top stables."
-
-- **Added token allowlist to `BracketPoolFactory`** — `mapping(address => bool) public allowedTokens`, `addToken`/`removeToken` owner functions (with zero-address and not-in-allowlist guards), constructor seeded from `address[] memory initialTokens`. `createPool` takes `address _token` as first parameter with `require(allowedTokens[_token], "Token not allowed")` guard. Removing a token from the allowlist does not affect existing pools. 15 factory tests (82 total).
-
-- **Updated deploy scripts** — `Deploy.s.sol`, `DeployLocal.s.sol`, `CreateSmokeTestPool.s.sol` updated for new constructor and `createPool` signatures.
-
-- **Regenerated `BracketPoolFactory.json` ABI** — includes `allowedTokens`, `addToken`, `removeToken`, `TokenAdded`, `TokenRemoved`, updated `createPool`. `token()` view removed.
-
-- **Frontend hooks** — `useAddToken` and `useRemoveToken` added to `useAdminPool.ts`. `useCreatePool` takes `token` as first arg.
-
-- **`CreatePoolForm`** — Payment Token dropdown added (Sepolia USDC pre-selected, "Custom address..." fallback for local dev with MockUSDC).
-
-- **Merged PR #7** — Clayton approved. Merged to main, branch deleted.
-
-- **Redeployed Sepolia factory** — New address: `0xac2bAA67cB2De97eab5e5E8cBD35aea2FD03b02e`. Verified on Etherscan. `NEXT_PUBLIC_FACTORY_ADDRESS` updated in Vercel. Rebuild triggered.
+- **Implemented tiered payouts (60/25/15)** in `scorer/src/ranking.ts` — `distributePrizes()` now splits the prize pool across the top 3 finishers instead of paying rank-1 only. Edge cases: fewer than 3 finishers (remaining tiers go to treasury), dust from integer division assigned to lowest-ranked winner. `tierEntries` sorted by `entryId` to enforce a deterministic dust assignment invariant.
+- **Added ranking tests** covering 1-winner, 2-winner, 3-winner, and >3-winner scenarios with split verification. Scorer tests went from 41 → 50.
+- **Opened PR #8** — `feature/tiered-payouts` → `main`: https://github.com/hank-butler/bracket-pool-dapp/pull/8
+- **Clayton's review feedback on PR #8:** "Update handoff doc and do not merge planning docs" — addressed by updating this handoff. The untracked planning docs (`docs/plans/2026-02-19-admin-ui-design.md`, `docs/plans/2026-02-19-admin-ui-implementation.md`, `docs/handoff-hb-2026-02-11.md`, `docs/screenshots/`) are not committed and will not be included in the PR.
 
 ## What's Next
 
 World Cup launch blockers remaining (priority order):
 
-1. **Tiered payouts (60/25/15)** — Scorer-only change in `scorer/src/ranking.ts`. `distributePrizes()` currently pays rank-1 only; needs to pay top 3 with a configurable split. ~2–3 hrs including edge cases and tests. No contract changes needed. Needed before any real-money pool launch.
+1. **Merge PR #8** — tests green, handoff updated. Ready to merge once Clayton approves.
 
-2. **World Cup scorer module** — New `wc-scoring.ts` with round-weighted points. Open design question first: how to encode group stage picks as `bytes32[]`. Each group has 6 teams; users predict which 2 (+ 3rd-place wildcard) advance. Once pick format is agreed, scoring and UI can proceed in parallel. ~4–6 hrs after format is decided.
+2. **World Cup scorer module** — New `wc-scoring.ts` with round-weighted points. Blocked on open design question: how to encode group stage picks as `bytes32[]`. Each group has 6 teams; users predict which 2 (+ 3rd-place wildcard for R16) advance. Decide the pick format first — then scorer + UI can proceed. ~4–6 hrs after format is decided.
 
-3. **World Cup bracket picker UI** — Largest remaining item. Two distinct UIs: group stage (table/ranking per group) and knockout stage (16-team elimination bracket). Must start by mid-March to leave buffer before June 11 kickoff. Estimated 2–3 weeks.
+3. **March Madness 2026 team data** — Run `/update-teams` after Selection Sunday (~March 15–16). Updates `web/src/lib/teams.ts`. Can't be done until the field is announced. ~1 hr.
 
-4. **March Madness 2026 team data** — Run `/update-teams` after Selection Sunday (~March 15–16). Updates `web/src/lib/teams.ts`. Can't be done until the field is announced.
+4. **World Cup bracket picker UI** — Largest remaining item. Two distinct UIs: group stage (table/ranking per group) and knockout stage (16-team elimination bracket). Must start by mid-March to leave buffer before June 11 kickoff. ~2–3 weeks.
 
 5. **Live leaderboard** — Partial scoring mode in scorer + leaderboard API route + polling UI on pool detail page. ~1 week. Important for a 5-week tournament where users disengage without standings.
 
@@ -54,10 +43,10 @@ World Cup launch blockers remaining (priority order):
 
 ## Current Branch State
 
-- **Branch:** `main`
-- **Pushed:** Yes — fully up to date with `origin/main`
-- **Open PRs:** None
-- **Uncommitted files:** `claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/plans/2026-02-19-admin-ui-design.md`, `docs/plans/2026-02-19-admin-ui-implementation.md`, `docs/screenshots/` — all untracked, not blocking
+- **Branch:** `feature/tiered-payouts`
+- **PR #8:** Open — https://github.com/hank-butler/bracket-pool-dapp/pull/8
+- **Pushed:** Yes — fully up to date with `origin/feature/tiered-payouts`
+- **Uncommitted files:** `claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/plans/2026-02-19-admin-ui-design.md`, `docs/plans/2026-02-19-admin-ui-implementation.md`, `docs/screenshots/` — all untracked, not part of this PR
 
 ## Local Development Setup
 
@@ -127,6 +116,7 @@ SCORER_RPC_URL=<Alchemy Sepolia HTTPS URL>                # or http://127.0.0.1:
 - **Merkle tree claims** — scorer generates tree, root posted on-chain, proofs hosted on IPFS via Pinata
 - **Claim deadline** — `finalizeDeadline + 90 days`, then admin can sweep unclaimed funds
 - **Tiebreaker** — predicted championship total score (MM) or total sixes (IPL), closest wins, ties split evenly
+- **Tiered payouts** — `distributePrizes()` splits prize pool 60/25/15 across top 3. Fewer than 3 finishers: unused tiers go to treasury. Dust from integer division goes to lowest-ranked winner. `tierEntries` sorted by `entryId` for deterministic dust assignment.
 - **Pool name prefix convention** — sport type encoded as prefix in `poolName`: `mm:`, `ipl:`, `wc:`. Frontend parses prefix via `getPoolTypeConfig(poolName)`. Old pools without prefix fall back to `DEFAULT_CONFIG`. No contract changes needed.
 - **Team data** — static config files in `web/src/lib/teams.ts` (MM) and `web/src/lib/ipl.ts` (IPL)
 - **Sport-agnostic contracts** — `gameCount` is a constructor parameter; pool type determined by `poolName` prefix (not `gameCount`)
