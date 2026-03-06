@@ -1,7 +1,7 @@
 export interface Team {
-  id: `0x${string}`;  // keccak256(abi.encodePacked(code))
+  id: `0x${string}`;
   name: string;
-  code: string;
+  code?: string;  // sport-specific short code (e.g. FIFA 3-letter for WC; absent for MM)
 }
 
 export interface SportModule {
