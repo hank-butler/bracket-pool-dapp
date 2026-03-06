@@ -5,9 +5,11 @@ import type { ScoredEntry, ScorerOutput } from './types';
 import type { Address } from 'viem';
 import type { SportModule } from '../../shared/sports/interface';
 import { marchmadness } from '../../shared/sports/marchmadness/scoring';
+import { worldcup2026 } from '../../shared/sports/worldcup2026/scoring';
 
 const SPORT_MODULES: Record<string, SportModule> = {
   mm: marchmadness,
+  wc: worldcup2026,
 };
 
 export async function runScorer(
