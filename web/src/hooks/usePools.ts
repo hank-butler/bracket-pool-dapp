@@ -35,6 +35,8 @@ export function usePoolDetails(address: `0x${string}`) {
       { address, abi: BracketPoolABI, functionName: 'finalizeDeadline' },
       { address, abi: BracketPoolABI, functionName: 'token' },
       { address, abi: BracketPoolABI, functionName: 'proofsCID' },
+      { address, abi: BracketPoolABI, functionName: 'sportId' },
+      { address, abi: BracketPoolABI, functionName: 'getPayoutBps' },
     ],
   });
 
@@ -53,6 +55,8 @@ export function usePoolDetails(address: `0x${string}`) {
     finalizeDeadline: Number(d[9]?.result || 0),
     usdcAddress: (d[10]?.result as `0x${string}`) || ('0x' + '0'.repeat(40) as `0x${string}`),
     proofsCID: (d[11]?.result as string) || '',
+    sportId: (d[12]?.result as string) || '',
+    payoutBps: ((d[13]?.result as readonly number[]) ?? []).map(Number),
     isLoading: results.isLoading,
   };
 }

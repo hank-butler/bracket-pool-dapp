@@ -62,6 +62,16 @@
         "internalType": "string"
       },
       {
+        "name": "_sportId",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "__payoutBps",
+        "type": "uint16[]",
+        "internalType": "uint16[]"
+      },
+      {
         "name": "_gameCount",
         "type": "uint256",
         "internalType": "uint256"

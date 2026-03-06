@@ -65,6 +65,42 @@ export async function readGameResults(
   return results as `0x${string}`[];
 }
 
+export async function readPoolConfig(
+  poolAddress: Address,
+  rpcUrl: string,
+  chainId: number = 11155111,
+): Promise<{ sportId: string; payoutBps: number[] }> {
+  const chain = chainId === 1 ? mainnet : sepolia;
+  const client = createPublicClient({ chain, transport: http(rpcUrl) });
+
+  const ABI = [
+    {
+      name: 'sportId',
+      type: 'function' as const,
+      inputs: [],
+      outputs: [{ name: '', type: 'string' }],
+      stateMutability: 'view' as const,
+    },
+    {
+      name: 'getPayoutBps',
+      type: 'function' as const,
+      inputs: [],
+      outputs: [{ name: '', type: 'uint16[]' }],
+      stateMutability: 'view' as const,
+    },
+  ] as const;
+
+  const [sportId, payoutBps] = await Promise.all([
+    client.readContract({ address: poolAddress, abi: ABI, functionName: 'sportId' }),
+    client.readContract({ address: poolAddress, abi: ABI, functionName: 'getPayoutBps' }),
+  ]);
+
+  return {
+    sportId: sportId as string,
+    payoutBps: (payoutBps as readonly number[]).map(Number),
+  };
+}
+
 export async function readTotalPoolValue(
   poolAddress: Address,
   rpcUrl: string,

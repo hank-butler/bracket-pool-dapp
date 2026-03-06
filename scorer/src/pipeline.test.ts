@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { runScorer } from './pipeline';
 
 vi.mock('./reader', () => ({
+  readPoolConfig: vi.fn().mockResolvedValue({ sportId: 'mm', payoutBps: [6000, 2500, 1500] }),
   readEntries: vi.fn().mockResolvedValue([
     {
       entryId: 0,

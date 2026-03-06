@@ -49,13 +49,13 @@ describe('rankEntries', () => {
 });
 
 describe('distributePrizes', () => {
-  it('single winner gets full prize pool', () => {
+  it('winner-take-all: single winner gets full prize pool', () => {
     const entries = [
       makeEntry(0, '0xA', 200, 145),
       makeEntry(1, '0xB', 100, 145),
     ];
     const ranked = rankEntries(entries, 145);
-    const result = distributePrizes(ranked, 19_000_000n); // $19 prize pool
+    const result = distributePrizes(ranked, 19_000_000n, [10000]);
 
     expect(result[0].prizeAmount).toBe(19_000_000n);
     expect(result[1].prizeAmount).toBe(0n);
@@ -67,20 +67,21 @@ describe('distributePrizes', () => {
       makeEntry(1, '0xB', 200, 150), // dist=5
     ];
     const ranked = rankEntries(entries, 145);
-    const result = distributePrizes(ranked, 20_000_000n);
+    const result = distributePrizes(ranked, 20_000_000n, [6000, 2500, 1500]);
 
+    // Both tied at rank 1 → 1 distinct rank → full pool split evenly
     expect(result[0].prizeAmount).toBe(10_000_000n);
     expect(result[1].prizeAmount).toBe(10_000_000n);
   });
 
-  it('handles dust correctly (remainder to first winner)', () => {
+  it('handles dust correctly (remainder to lowest entryId in tier)', () => {
     const entries = [
       makeEntry(0, '0xA', 200, 140),
       makeEntry(1, '0xB', 200, 150),
       makeEntry(2, '0xC', 200, 140), // 3-way tie, dist=5 each
     ];
     const ranked = rankEntries(entries, 145);
-    const result = distributePrizes(ranked, 19_000_001n); // not evenly divisible by 3
+    const result = distributePrizes(ranked, 19_000_001n, [6000, 2500, 1500]);
 
     const total = result.reduce((sum, e) => sum + e.prizeAmount, 0n);
     expect(total).toBe(19_000_001n); // no dust lost
@@ -95,34 +96,34 @@ describe('distributePrizes (tiered)', () => {
       makeEntry(2, '0xC', 100, 145),
     ];
     const ranked = rankEntries(entries, 145);
-    const result = distributePrizes(ranked, 100_000_000n);
+    const result = distributePrizes(ranked, 100_000_000n, [6000, 2500, 1500]);
 
     expect(result.find(e => e.entryId === 0)?.prizeAmount).toBe(60_000_000n);
     expect(result.find(e => e.entryId === 1)?.prizeAmount).toBe(25_000_000n);
     expect(result.find(e => e.entryId === 2)?.prizeAmount).toBe(15_000_000n);
   });
 
-  it('3 distinct ranks: inter-tier dust goes to rank-1 entry', () => {
+  it('3 distinct ranks: inter-tier dust goes to last paid tier', () => {
     const entries = [
       makeEntry(0, '0xA', 300, 145),
       makeEntry(1, '0xB', 200, 145),
       makeEntry(2, '0xC', 100, 145),
     ];
     const ranked = rankEntries(entries, 145);
-    const result = distributePrizes(ranked, 100_000_001n);
+    const result = distributePrizes(ranked, 100_000_001n, [6000, 2500, 1500]);
 
-    // t2 = 100_000_001 * 25n / 100n = 25_000_000
-    // t3 = 100_000_001 * 15n / 100n = 15_000_000
-    // t1 = 100_000_001 - 25_000_000 - 15_000_000 = 60_000_001
-    expect(result.find(e => e.entryId === 0)?.prizeAmount).toBe(60_000_001n);
+    // t1 = 100_000_001 * 6000 / 10000 = 60_000_000 (integer div)
+    // t2 = 100_000_001 * 2500 / 10000 = 25_000_000 (integer div)
+    // t3 (last) = 100_000_001 - 85_000_000 = 15_000_001 (absorbs dust)
+    expect(result.find(e => e.entryId === 0)?.prizeAmount).toBe(60_000_000n);
     expect(result.find(e => e.entryId === 1)?.prizeAmount).toBe(25_000_000n);
-    expect(result.find(e => e.entryId === 2)?.prizeAmount).toBe(15_000_000n);
+    expect(result.find(e => e.entryId === 2)?.prizeAmount).toBe(15_000_001n);
 
     const total = result.reduce((sum, e) => sum + e.prizeAmount, 0n);
     expect(total).toBe(100_000_001n);
   });
 
-  it('2 distinct ranks (3+ entries): 75/25 split', () => {
+  it('2 distinct ranks: 75/25 split', () => {
     // ranks: [1, 2, 2]
     const entries = [
       makeEntry(0, '0xA', 300, 145),
@@ -130,7 +131,7 @@ describe('distributePrizes (tiered)', () => {
       makeEntry(2, '0xC', 200, 145),
     ];
     const ranked = rankEntries(entries, 145);
-    const result = distributePrizes(ranked, 100_000_000n);
+    const result = distributePrizes(ranked, 100_000_000n, [7500, 2500]);
 
     expect(result.find(e => e.entryId === 0)?.prizeAmount).toBe(75_000_000n);
     // entries 1 and 2 are tied at rank 2 — split 25% evenly
@@ -138,18 +139,18 @@ describe('distributePrizes (tiered)', () => {
     expect(result.find(e => e.entryId === 2)?.prizeAmount).toBe(12_500_000n);
   });
 
-  it('2 distinct ranks: inter-tier dust goes to rank-1', () => {
+  it('2 distinct ranks: inter-tier dust goes to last paid tier', () => {
     const entries = [
       makeEntry(0, '0xA', 300, 145),
       makeEntry(1, '0xB', 200, 145),
       makeEntry(2, '0xC', 200, 145),
     ];
     const ranked = rankEntries(entries, 145);
-    const result = distributePrizes(ranked, 100_000_001n);
+    const result = distributePrizes(ranked, 100_000_001n, [7500, 2500]);
 
-    // t2 = 100_000_001 * 25n / 100n = 25_000_000
-    // t1 = 100_000_001 - 25_000_000 = 75_000_001
-    expect(result.find(e => e.entryId === 0)?.prizeAmount).toBe(75_000_001n);
+    // t1 = 100_000_001 * 7500 / 10000 = 75_000_000 (integer div)
+    // t2 (last) = 100_000_001 - 75_000_000 = 25_000_001 (absorbs dust)
+    expect(result.find(e => e.entryId === 0)?.prizeAmount).toBe(75_000_000n);
     const total = result.reduce((sum, e) => sum + e.prizeAmount, 0n);
     expect(total).toBe(100_000_001n);
   });
@@ -164,7 +165,7 @@ describe('distributePrizes (tiered)', () => {
       makeEntry(4, '0xE', 100, 145),
     ];
     const ranked = rankEntries(entries, 145);
-    const result = distributePrizes(ranked, 120_000_000n);
+    const result = distributePrizes(ranked, 120_000_000n, [6000, 2500, 1500]);
 
     expect(result.find(e => e.entryId === 0)?.prizeAmount).toBe(72_000_000n); // 60%
     // 25% of 120_000_000 = 30_000_000, split 3 ways = 10_000_000 each
@@ -184,7 +185,7 @@ describe('distributePrizes (tiered)', () => {
       makeEntry(3, '0xD', 100, 145),
     ];
     const ranked = rankEntries(entries, 145);
-    const result = distributePrizes(ranked, 100_000_000n);
+    const result = distributePrizes(ranked, 100_000_000n, [6000, 2500, 1500]);
 
     expect(result.find(e => e.entryId === 3)?.prizeAmount).toBe(0n);
     const total = result.reduce((sum, e) => sum + e.prizeAmount, 0n);
@@ -194,18 +195,18 @@ describe('distributePrizes (tiered)', () => {
   it('exactly 1 entry: 100% to that entry', () => {
     const entries = [makeEntry(0, '0xA', 200, 145)];
     const ranked = rankEntries(entries, 145);
-    const result = distributePrizes(ranked, 19_000_000n);
+    const result = distributePrizes(ranked, 19_000_000n, [6000, 2500, 1500]);
 
     expect(result[0].prizeAmount).toBe(19_000_000n);
   });
 
-  it('2 entries: 100% to winner (not tiered)', () => {
+  it('winner-take-all payoutBps: 2 entries, only rank 1 paid', () => {
     const entries = [
       makeEntry(0, '0xA', 200, 145),
       makeEntry(1, '0xB', 100, 145),
     ];
     const ranked = rankEntries(entries, 145);
-    const result = distributePrizes(ranked, 19_000_000n);
+    const result = distributePrizes(ranked, 19_000_000n, [10000]);
 
     expect(result.find(e => e.entryId === 0)?.prizeAmount).toBe(19_000_000n);
     expect(result.find(e => e.entryId === 1)?.prizeAmount).toBe(0n);
@@ -218,8 +219,36 @@ describe('distributePrizes (tiered)', () => {
       makeEntry(2, '0xC', 200, 145),
     ];
     const ranked = rankEntries(entries, 145);
-    const result = distributePrizes(ranked, 30_000_000n);
+    const result = distributePrizes(ranked, 30_000_000n, [6000, 2500, 1500]);
 
     result.forEach(e => expect(e.prizeAmount).toBe(10_000_000n));
+  });
+
+  it('winner-take-all: single entry in payoutBps', () => {
+    const entries = [
+      makeEntry(0, '0xA', 300, 145),
+      makeEntry(1, '0xB', 200, 145),
+      makeEntry(2, '0xC', 100, 145),
+    ];
+    const ranked = rankEntries(entries, 145);
+    const prize = 1000_000_000n;
+    const result = distributePrizes(ranked, prize, [10000]);
+    expect(result.find(e => e.entryId === 0)!.prizeAmount).toBe(prize);
+    expect(result.find(e => e.entryId === 1)!.prizeAmount).toBe(0n);
+    expect(result.find(e => e.entryId === 2)!.prizeAmount).toBe(0n);
+  });
+
+  it('custom split: 50/30/20', () => {
+    const entries = [
+      makeEntry(0, '0xA', 300, 145),
+      makeEntry(1, '0xB', 200, 145),
+      makeEntry(2, '0xC', 100, 145),
+    ];
+    const ranked = rankEntries(entries, 145);
+    const prize = 1000_000_000n;
+    const result = distributePrizes(ranked, prize, [5000, 3000, 2000]);
+    expect(result.find(e => e.entryId === 0)!.prizeAmount).toBe(500_000_000n);
+    expect(result.find(e => e.entryId === 1)!.prizeAmount).toBe(300_000_000n);
+    expect(result.find(e => e.entryId === 2)!.prizeAmount).toBe(200_000_000n);
   });
 });

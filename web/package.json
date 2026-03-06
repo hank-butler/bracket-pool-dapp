@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prebuild": "rm -rf src/scorer && cp -r ../scorer/src src/scorer",
-    "predev": "rm -rf src/scorer && cp -r ../scorer/src src/scorer",
+    "prebuild": "rm -rf src/scorer src/shared shared && cp -r ../scorer/src src/scorer && cp -r ../shared shared",
+    "predev": "rm -rf src/scorer src/shared shared && cp -r ../scorer/src src/scorer && cp -r ../shared shared",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

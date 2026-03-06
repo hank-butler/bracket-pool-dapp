@@ -23,6 +23,16 @@
         "internalType": "string"
       },
       {
+        "name": "_sportId",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "__payoutBps",
+        "type": "uint16[]",
+        "internalType": "uint16[]"
+      },
+      {
         "name": "_gameCount",
         "type": "uint256",
         "internalType": "uint256"
@@ -352,6 +362,19 @@
   },
   {
     "type": "function",
+    "name": "getPayoutBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16[]",
+        "internalType": "uint16[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getUserEntryIds",
     "inputs": [
       {
@@ -498,6 +521,19 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "sportId",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",

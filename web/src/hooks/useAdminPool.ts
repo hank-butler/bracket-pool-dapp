@@ -9,6 +9,8 @@ export function useCreatePool() {
   function createPool(args: {
     token: `0x${string}`;
     poolName: string;
+    sportId: string;
+    payoutBps: number[];
     gameCount: number;
     lockTime: number;
     finalizeDeadline: number;
@@ -23,6 +25,8 @@ export function useCreatePool() {
       args: [
         args.token,
         args.poolName,
+        args.sportId,
+        args.payoutBps,
         BigInt(args.gameCount),
         BigInt(args.lockTime),
         BigInt(args.finalizeDeadline),

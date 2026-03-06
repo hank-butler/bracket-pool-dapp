@@ -1,52 +1,62 @@
-# Handoff — 2026-03-04 — HB
+# Handoff — 2026-03-05 — HB
 
-> **Author:** HB | **Date:** 2026-03-04
+> **Author:** HB | **Date:** 2026-03-05
 
 ## Project Status
 
-Tiered payouts (60/25/15) are implemented in the scorer and an open PR is awaiting review. All three layers are green. The next major unlock is deciding the World Cup group stage pick encoding, which unblocks the scorer module and UI work.
+All 14 tasks of the sport module refactor are complete on `feature/sport-module-refactor`. The branch adds `sportId` + `payoutBps` to the contracts, moves sport logic into `shared/`, adds the World Cup 2026 scorer, wires the pipeline and frontend to read config from chain, and has an open PR (#9) pending review.
 
 | Layer | Status | Tests |
 |-------|--------|-------|
-| Smart Contracts (Foundry) | Unchanged from last session | 82 tests pass |
-| Off-Chain Scorer (TypeScript) | Tiered payouts complete — PR #8 open | 50 tests pass (6 files) |
-| Frontend (Next.js + wagmi) | Unchanged from last session | Build clean, 6 routes |
+| Smart Contracts (Foundry) | `sportId` + `payoutBps` on BracketPool + Factory | 86 tests pass |
+| Off-Chain Scorer (TypeScript) | WC2026 scorer added; pipeline sport-aware; `distributePrizes` data-driven | 68 tests pass (7 files) |
+| Frontend (Next.js + wagmi) | `usePoolDetails` returns `sportId`/`payoutBps`; `CreatePoolForm` has payout split field | Build clean, 6 routes |
 
 ## What Was Done This Session
 
-- **Implemented tiered payouts (60/25/15)** in `scorer/src/ranking.ts` — `distributePrizes()` now splits the prize pool across the top 3 finishers instead of paying rank-1 only. Edge cases: fewer than 3 finishers (remaining tiers go to treasury), dust from integer division assigned to lowest-ranked winner. `tierEntries` sorted by `entryId` to enforce a deterministic dust assignment invariant.
-- **Added ranking tests** covering 1-winner, 2-winner, 3-winner, and >3-winner scenarios with split verification. Scorer tests went from 41 → 50.
-- **Opened PR #8** — `feature/tiered-payouts` → `main`: https://github.com/hank-butler/bracket-pool-dapp/pull/8
-- **Clayton's review feedback on PR #8:** "Update handoff doc and do not merge planning docs" — addressed by updating this handoff. The untracked planning docs (`docs/plans/2026-02-19-admin-ui-design.md`, `docs/plans/2026-02-19-admin-ui-implementation.md`, `docs/handoff-hb-2026-02-11.md`, `docs/screenshots/`) are not committed and will not be included in the PR.
+- **Tasks 7–14** of `docs/plans/2026-03-05-sport-module-refactor.md` completed:
+
+- **Task 7 — web prebuild + teams.ts re-export:** `web/package.json` prebuild/predev now copies `shared/` → `web/shared/` (not `web/src/shared/` — the extra level is required so scorer re-exports resolve correctly). `web/src/lib/teams.ts` stripped of team data; re-exports `Team` (= `MMTeam`) and `ALL_TEAMS` from `../../shared/sports/marchmadness/teams`. `web/shared/` added to `.gitignore`.
+
+- **Task 8 — `readPoolConfig()`:** Added to `scorer/src/reader.ts`; reads `sportId` (string) and `getPayoutBps()` (uint16[]) from chain in a single `Promise.all`.
+
+- **Tasks 9 + 10 — `distributePrizes` + pipeline:** `distributePrizes()` now accepts `payoutBps: number[]` (required third arg). Dust goes to the last paid tier. Pipeline updated to call `readPoolConfig`, look up sport module from `SPORT_MODULES` record, and pass `payoutBps` through. `wc: worldcup2026` registered alongside `mm: marchmadness`.
+
+- **Task 11 — WC 2026 teams:** `shared/sports/worldcup2026/teams.ts` created with all 48 teams across groups A–L. 6 slots are TBD pending UEFA playoffs (Mar 26–31) and intercontinental playoffs (also Mar 2026): TBD-A (Group A), TBD-B (Group B), TBD-D (Group D), TBD-F (Group F), TBD-I (Group I), TBD-K (Group K).
+
+- **Task 12 — WC scoring module + tests:** `shared/sports/worldcup2026/scoring.ts` implements the `bytes32[88]` picks layout (0–47 group stage, 48–55 advancing 3rd-place, 56–71 R32, 72–79 QF, 80–83 SF, 84–85 finalists, 86 winner, 87 3rd place). Perfect score = 1,132. 16 tests added in `scorer/test/wc-scoring.test.ts`.
+
+- **Task 13 — Frontend hooks:** `usePoolDetails` in `usePools.ts` now reads `sportId` and `payoutBps` from chain. `useCreatePool` in `useAdminPool.ts` accepts and passes through `sportId` and `payoutBps`. `CreatePoolForm` maps sport to `sportId` and adds a "Payout Splits (bps)" input field defaulting to `6000,2500,1500` with client-side sum validation.
+
+- **Task 14 — Final verification + PR:** All tests green; PR #9 opened at `https://github.com/hank-butler/bracket-pool-dapp/pull/9`.
+
+- **Interface fix:** `Team.code` made optional (`code?: string`) in `shared/sports/interface.ts` since MM teams don't use a short code.
+
+- **Test fixes:** `ranking.test.ts` updated throughout for new `distributePrizes` signature; dust now goes to last paid tier (not tier 1). WC scoring tests use separate `makeResults`/`makePicks` helpers to avoid ZERO-matches-ZERO false positives.
 
 ## What's Next
 
-World Cup launch blockers remaining (priority order):
+1. **Update TBD team codes in `shared/sports/worldcup2026/teams.ts`** once playoffs resolve:
+   - UEFA playoffs semifinals Mar 26, finals Mar 31 → fills TBD-A (Group A), TBD-B (Group B), TBD-D (Group D), TBD-F (Group F)
+   - Intercontinental playoffs Mar 2026 → fills TBD-I (Group I), TBD-K (Group K)
+   - Update the `code` and `name` fields; the `id` is derived from `keccak256(toHex(code))` so changing the code changes the ID — must be done before any pool lock time
 
-1. **Merge PR #8** — tests green, handoff updated. Ready to merge once Clayton approves.
+2. **Merge PR #9** after Clayton reviews
 
-2. **World Cup scorer module** — New `wc-scoring.ts` with round-weighted points. Blocked on open design question: how to encode group stage picks as `bytes32[]`. Each group has 6 teams; users predict which 2 (+ 3rd-place wildcard for R16) advance. Decide the pick format first — then scorer + UI can proceed. ~4–6 hrs after format is decided.
+3. **Redeploy Sepolia factory** after merge — `createPool` signature changed (added `sportId` + `payoutBps` args); old factory at `0xac2bAA67cB2De97eab5e5E8cBD35aea2FD03b02e` will no longer work
 
-3. **March Madness 2026 team data** — Run `/update-teams` after Selection Sunday (~March 15–16). Updates `web/src/lib/teams.ts`. Can't be done until the field is announced. ~1 hr.
+4. **IPL sport module** — `shared/sports/ipl/` not yet created; frontend and scorer still reference the legacy `web/src/scorer/ipl-scoring.ts`. Low priority until IPL pool is needed.
 
-4. **World Cup bracket picker UI** — Largest remaining item. Two distinct UIs: group stage (table/ranking per group) and knockout stage (16-team elimination bracket). Must start by mid-March to leave buffer before June 11 kickoff. ~2–3 weeks.
+5. **Frontend WC bracket UI** — `BracketPicker.tsx` is MM-specific (63 games, region/seed layout). WC picks (88 slots, group stage + knockout) will need a new `StandingsPicker`-style component or a WC-specific picker. Not yet started.
 
-5. **Live leaderboard** — Partial scoring mode in scorer + leaderboard API route + polling UI on pool detail page. ~1 week. Important for a 5-week tournament where users disengage without standings.
-
-6. **Three entry tiers (Minnow/Shark/Whale)** — Zero code. Three `createPool` calls at deploy time with different `basePrice` values ($100/$1K/$10K USDC). Do on launch day.
-
-7. **L2 deployment (Base)** — Contracts are fully compatible; it's a deployment target change only. Update deploy scripts + Vercel env vars when ready.
-
-**Minor follow-up:** "Base Price (USDC)" label in `CreatePoolForm` is hardcoded — should become token-agnostic in a cleanup pass once multi-token pools are in use.
-
-**Open question before starting World Cup scorer:** Define the pick encoding for the group stage. Each group has 6 teams; users predict which 2 (+ 3rd-place wildcard for R16) advance. This needs a `bytes32[]` encoding that the scorer can verify against posted results.
+6. **Gnosis Safe** — Transfer factory ownership to 2-of-2 multisig before mainnet.
 
 ## Current Branch State
 
-- **Branch:** `feature/tiered-payouts`
-- **PR #8:** Open — https://github.com/hank-butler/bracket-pool-dapp/pull/8
-- **Pushed:** Yes — fully up to date with `origin/feature/tiered-payouts`
-- **Uncommitted files:** `claude.md`, `docs/handoff-hb-2026-02-11.md`, `docs/plans/2026-02-19-admin-ui-design.md`, `docs/plans/2026-02-19-admin-ui-implementation.md`, `docs/screenshots/` — all untracked, not part of this PR
+- **Branch:** `feature/sport-module-refactor`
+- **Pushed:** Yes — fully up to date with `origin/feature/sport-module-refactor`
+- **Open PR:** #9 — `https://github.com/hank-butler/bracket-pool-dapp/pull/9`
+- **Uncommitted files:** `claude.md` — untracked, not blocking
 
 ## Local Development Setup
 
@@ -66,14 +76,8 @@ forge script script/DeployLocal.s.sol --rpc-url http://127.0.0.1:8545 --broadcas
 
 # Terminal 3 — start frontend
 cd web
-npm run dev   # prebuild copies scorer source into web/src/scorer/
+npm run dev   # prebuild copies scorer source into web/src/scorer/ and shared/ into web/shared/
 # Open http://localhost:3000
-```
-
-To create a short-window pool for admin smoke testing:
-```bash
-cd contracts
-TOKEN_ADDRESS=<mockUSDC> FACTORY_ADDRESS=<factory> ~/.foundry/bin/forge script script/CreateSmokeTestPool.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
 ```
 
 ### MetaMask Configuration
@@ -97,16 +101,15 @@ ETHERSCAN_API_KEY=<Etherscan API key>
 **`web/.env.local`:**
 ```
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=<WalletConnect project ID>
-NEXT_PUBLIC_FACTORY_ADDRESS=0xac2bAA67cB2De97eab5e5E8cBD35aea2FD03b02e   # Sepolia — deployed 2026-03-02
+NEXT_PUBLIC_FACTORY_ADDRESS=0xac2bAA67cB2De97eab5e5E8cBD35aea2FD03b02e   # Sepolia — NEEDS REDEPLOY after PR #9 merges
 PINATA_JWT=<Pinata JWT from app.pinata.cloud>
 SCORER_RPC_URL=<Alchemy Sepolia HTTPS URL>                # or http://127.0.0.1:8545 for local
 ```
 
 ### Sepolia Deployment
 
-- **Factory (current):** `0xac2bAA67cB2De97eab5e5E8cBD35aea2FD03b02e` — deployed 2026-03-02, verified on Etherscan
+- **Factory (current):** `0xac2bAA67cB2De97eab5e5E8cBD35aea2FD03b02e` — deployed 2026-03-02, **stale after PR #9 merges**
 - **Frontend:** `https://bracket-pool-dapp.vercel.app/`
-- **No pools exist yet on the new factory** — go to `/admin` on the live site, connect the deployer wallet (Sepolia), and create one. Sepolia USDC (`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`) is already on the allowlist from the deploy.
 
 ## Key Architecture Decisions
 
@@ -115,18 +118,18 @@ SCORER_RPC_URL=<Alchemy Sepolia HTTPS URL>                # or http://127.0.0.1:
 - **5% fee** via `totalPoolValue * 500 / 10000` (Solidity integer division)
 - **Merkle tree claims** — scorer generates tree, root posted on-chain, proofs hosted on IPFS via Pinata
 - **Claim deadline** — `finalizeDeadline + 90 days`, then admin can sweep unclaimed funds
-- **Tiebreaker** — predicted championship total score (MM) or total sixes (IPL), closest wins, ties split evenly
-- **Tiered payouts** — `distributePrizes()` splits prize pool 60/25/15 across top 3. Fewer than 3 finishers: unused tiers go to treasury. Dust from integer division goes to lowest-ranked winner. `tierEntries` sorted by `entryId` for deterministic dust assignment.
-- **Pool name prefix convention** — sport type encoded as prefix in `poolName`: `mm:`, `ipl:`, `wc:`. Frontend parses prefix via `getPoolTypeConfig(poolName)`. Old pools without prefix fall back to `DEFAULT_CONFIG`. No contract changes needed.
-- **Team data** — static config files in `web/src/lib/teams.ts` (MM) and `web/src/lib/ipl.ts` (IPL)
-- **Sport-agnostic contracts** — `gameCount` is a constructor parameter; pool type determined by `poolName` prefix (not `gameCount`)
-- **IPL scoring** — position accuracy (max 100) + bonuses for champion (+20), runner-up (+10), top-4 (+5 each, max 20) = perfect score 150
-- **Scorer importability** — scorer source is copied into `web/src/scorer/` at build time (prebuild/predev scripts); not committed to git. Avoids Turbopack's restriction on importing files outside the project root.
-- **Admin access control** — wallet-based only; UI reads `factory.owner()` and gates all admin pages. Before mainnet: transfer ownership to Gnosis Safe 2-of-2.
-- **IPFS optional in local dev** — scorer API route skips Pinata and returns a placeholder CID when `PINATA_JWT` is not set, enabling full admin UI smoke testing without an IPFS account.
-- **Results input** — file upload only (textarea removed due to clipboard encoding issues with bytes32 arrays). Admin uploads a `.json` file containing a `bytes32[]` array of game results.
-- **`token` not `usdc`** — The ERC20 payment token field is named `token` in both contracts. Allows any ERC20, not just USDC. Frontend and ABIs updated to match.
-- **Token allowlist** — `BracketPoolFactory` has `mapping(address => bool) public allowedTokens`. Owner calls `addToken`/`removeToken`. Constructor seeded with `address[] memory initialTokens`. `createPool` requires token to be on allowlist. Removing a token does not affect existing pools.
-- **`maxEntries`** — Optional entry cap on pools (0 = unlimited). Cheap insurance against viral traffic overwhelming the scorer.
-- **`updateResults()`** — Admin can correct posted results before the Merkle root is set. Eliminates the only path to a forced pool cancellation from a bad `setResults()` call.
-- **`via_ir = true`** — Enabled in `foundry.toml` to resolve stack-too-deep compiler error from `BracketPool` constructor parameter count. No functional impact.
+- **Tiebreaker** — predicted championship total score (MM) or total goals in Final (WC), closest wins, ties split evenly
+- **Tiered payouts** — `distributePrizes()` accepts `payoutBps: number[]` from chain. Dust goes to the last paid tier. Supports winner-take-all `[10000]`, top-3 `[6000, 2500, 1500]`, or any custom split.
+- **`sportId` on-chain** — `BracketPool.sportId` identifies which scorer module to use. Scorer reads it via `readPoolConfig()`.
+- **`payoutBps` on-chain** — `BracketPool.getPayoutBps()` returns `uint16[]` summing to 10000. Enables per-pool payout structures.
+- **`shared/` directory** — sport modules (teams + scoring) live at repo root. Copied into `web/shared/` at build time (not `web/src/shared/` — the extra directory level makes scorer re-export paths resolve correctly from `web/src/scorer/`).
+- **Pool name prefix convention** — `mm:`, `wc:`, `ipl:` prefix in `poolName` used by frontend for UI routing. `sportId` field used by scorer for module selection.
+- **WC picks encoding** — flat `bytes32[88]`: 0–47 group order (4 slots × 12 groups), 48–55 advancing 3rd-place, 56–71 R32, 72–79 QF, 80–83 SF, 84–85 finalists, 86 winner, 87 3rd place. Perfect score = 1,132.
+- **WC team IDs** — `keccak256(toHex(code))` where `code` is the FIFA 3-letter code. Changing the code changes the ID — must be finalized before pool lock.
+- **Token allowlist** — `BracketPoolFactory` has `mapping(address => bool) public allowedTokens`. Owner calls `addToken`/`removeToken`.
+- **`maxEntries`** — Optional entry cap on pools (0 = unlimited).
+- **`updateResults()`** — Admin can correct posted results before the Merkle root is set.
+- **`via_ir = true`** — Enabled in `foundry.toml` to resolve stack-too-deep compiler error.
+- **Admin access control** — wallet-based only; UI reads `factory.owner()`. Before mainnet: transfer ownership to Gnosis Safe 2-of-2.
+- **IPFS optional in local dev** — scorer API route skips Pinata and returns placeholder CID when `PINATA_JWT` is not set.
+- **Results input** — file upload only (textarea removed). Admin uploads `.json` file with `bytes32[]` array.
