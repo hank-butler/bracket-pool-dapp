@@ -9,6 +9,8 @@ import {
   isWCComplete,
   wcPickedCount,
   wcRandomFill,
+  getThirdPlaceCandidates,
+  advancingThirdCount,
   type WCState,
   type Matchup,
   type Group,
@@ -259,18 +261,65 @@ function GroupCard({
 // ─── Stubs ───────────────────────────────────────────────────────────────────
 
 function AdvancingThirdSection({
-  state: _state,
-  disabled: _disabled,
-  onToggle: _onToggle,
+  state,
+  disabled,
+  onToggle,
 }: {
   state: WCState;
   disabled?: boolean;
   onToggle: (id: `0x${string}`, name: string) => void;
 }) {
-  // TODO: implement in Task 3/4
+  const candidates = getThirdPlaceCandidates(state);
+  const selectedCount = advancingThirdCount(state);
+  const atMax = selectedCount >= 8;
+
+  const selectedIds = new Set(
+    state.picks.slice(48, 56).filter((p): p is `0x${string}` => p !== null),
+  );
+
   return (
-    <div className="panel-90s p-2 text-xs text-center">
-      Advancing 3rd &mdash; coming next
+    <div>
+      <div className="bracket-region-title">
+        <span className="star">&#9733;</span> Advancing 3rd-Place Teams &mdash; Pick 8
+      </div>
+      <p className="text-xs mb-2">
+        Selected: <b>{selectedCount}</b> / 8{' '}
+        {selectedCount < 8 && (
+          <span className="status-warning">({8 - selectedCount} more needed)</span>
+        )}
+        {selectedCount === 8 && <span className="status-success">Complete ✓</span>}
+      </p>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          gap: '6px',
+        }}
+      >
+        {candidates.map(({ id, name, group }) => {
+          const isSelected = selectedIds.has(id);
+          const isDisabledBtn = disabled || (!isSelected && atMax);
+          return (
+            <button
+              key={id}
+              type="button"
+              disabled={isDisabledBtn}
+              onClick={() => onToggle(id, name)}
+              className={[
+                'btn-90s text-xs py-1',
+                isSelected ? 'btn-90s-primary' : '',
+                isDisabledBtn ? 'opacity-50 cursor-not-allowed' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              title={`Group ${group} 3rd place`}
+            >
+              <span className="text-xs text-gray-500 mr-1">{group}</span>
+              {name}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
