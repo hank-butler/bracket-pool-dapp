@@ -245,28 +245,24 @@ export function getDownstreamKnockoutSlots(changedSlot: number): number[] {
 
   function visit(slot: number) {
     for (const matchup of ALL_KNOCKOUT_MATCHUPS) {
+      if (result.has(matchup.outputSlot)) continue;
       let dependsOnSlot = false;
-      if (matchup.sourceA.type === 'pick' && matchup.sourceA.slotIndex === slot) {
-        dependsOnSlot = true;
+      for (const source of [matchup.sourceA, matchup.sourceB]) {
+        if (source.type === 'pick' && source.slotIndex === slot) {
+          dependsOnSlot = true;
+          break;
+        }
+        if (source.type === 'sfLoser') {
+          // sfLoser depends on the two SF participant slots and the finalist slot
+          const [a, b] = source.sfSlots;
+          const finalistSlot = (a === 80 && b === 81) ? 84 : (a === 82 && b === 83) ? 85 : -1;
+          if (source.sfSlots.includes(slot as never) || finalistSlot === slot) {
+            dependsOnSlot = true;
+            break;
+          }
+        }
       }
-      if (matchup.sourceB.type === 'pick' && matchup.sourceB.slotIndex === slot) {
-        dependsOnSlot = true;
-      }
-      // sfLoser sources depend on: the SF participant slots AND the finalist slot
-      if (matchup.sourceA.type === 'sfLoser') {
-        const [a, b] = matchup.sourceA.sfSlots;
-        if (a === slot || b === slot) dependsOnSlot = true;
-        // finalist slot for SF1 is 84, SF2 is 85
-        const finalistSlot = (a === 80 && b === 81) ? 84 : (a === 82 && b === 83) ? 85 : -1;
-        if (finalistSlot === slot) dependsOnSlot = true;
-      }
-      if (matchup.sourceB.type === 'sfLoser') {
-        const [a, b] = matchup.sourceB.sfSlots;
-        if (a === slot || b === slot) dependsOnSlot = true;
-        const finalistSlot = (a === 80 && b === 81) ? 84 : (a === 82 && b === 83) ? 85 : -1;
-        if (finalistSlot === slot) dependsOnSlot = true;
-      }
-      if (dependsOnSlot && !result.has(matchup.outputSlot)) {
+      if (dependsOnSlot) {
         result.add(matchup.outputSlot);
         visit(matchup.outputSlot);
       }
@@ -321,6 +317,8 @@ export function swapGroupPositions(
   const groupIndex = GROUPS.indexOf(group);
   const slotA = groupIndex * 4 + posA;
   const slotB = groupIndex * 4 + posB;
+
+  if (posA === posB) return state;
 
   // Identify the old 3rd-place team before the swap (pos 2)
   const thirdSlot = groupIndex * 4 + 2;
@@ -433,15 +431,13 @@ export function selectKnockoutWinner(
   newPicks[outputSlot] = winnerId;
   newNames[outputSlot] = winnerName;
 
-  // If winner changed, clear downstream
+  // If winner changed, clear ALL downstream slots unconditionally —
+  // a team further along may have beaten the old winner in a later round.
   if (oldWinnerId && oldWinnerId !== winnerId) {
     const downstream = getDownstreamKnockoutSlots(outputSlot);
     for (const ds of downstream) {
-      // Only clear if the downstream pick was the old winner
-      if (newPicks[ds] === oldWinnerId) {
-        newPicks[ds] = null;
-        newNames[ds] = null;
-      }
+      newPicks[ds] = null;
+      newNames[ds] = null;
     }
   }
 
@@ -536,17 +532,7 @@ export function wcRandomFill(): WCState {
   }
 
   // 3. Fill knockout matchups in order
-  const allMatchups = [
-    ...R32_MATCHUPS,
-    ...QF_MATCHUPS,
-    ...SF_MATCHUPS,
-    SEMIFINAL_MATCHUP_1,
-    SEMIFINAL_MATCHUP_2,
-    FINAL_MATCHUP,
-    THIRD_PLACE_MATCHUP,
-  ];
-
-  for (const matchup of allMatchups) {
+  for (const matchup of ALL_KNOCKOUT_MATCHUPS) {
     const { teamA, teamB } = getMatchupTeams(matchup, state.picks, state.pickNames);
     if (!teamA || !teamB) continue;
     const winner = Math.random() < 0.5 ? teamA : teamB;
