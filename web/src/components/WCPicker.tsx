@@ -25,7 +25,10 @@ interface WCPickerProps {
   disabled?: boolean;
 }
 
-export function WCPicker({ gameCount: _gameCount, poolName, onComplete, disabled }: WCPickerProps) {
+export function WCPicker({ gameCount, poolName, onComplete, disabled }: WCPickerProps) {
+  if (process.env.NODE_ENV !== 'production' && gameCount !== 88) {
+    console.warn(`WCPicker: expected gameCount 88 but received ${gameCount}`);
+  }
   const [state, setState] = useState<WCState>(() => createInitialWCState());
   const poolConfig = getPoolTypeConfig(poolName);
 
@@ -34,12 +37,13 @@ export function WCPicker({ gameCount: _gameCount, poolName, onComplete, disabled
 
   const handleRandomize = useCallback(() => {
     if (disabled) return;
-    setState(wcRandomFill());
+    setState(() => wcRandomFill());
   }, [disabled]);
 
   const handleTiebreaker = useCallback(
     (val: string) => {
       if (disabled) return;
+      if (val === '') return;
       const num = parseInt(val, 10) || 0;
       setState((prev) => ({ ...prev, tiebreaker: num }));
     },
@@ -204,7 +208,7 @@ function GroupCard({
   const [overPos, setOverPos] = useState<number | null>(null);
 
   return (
-    <div className="panel-90s p-2">
+    <div className="panel-90s p-2" onDragLeave={() => setOverPos(null)}>
       <div className="bracket-region-title text-xs mb-1">Group {group}</div>
       {teams.map(({ id, name, pos }) => {
         const isDragging = draggingPos === pos;
@@ -263,6 +267,7 @@ function AdvancingThirdSection({
   disabled?: boolean;
   onToggle: (id: `0x${string}`, name: string) => void;
 }) {
+  // TODO: implement in Task 3/4
   return (
     <div className="panel-90s p-2 text-xs text-center">
       Advancing 3rd &mdash; coming next
@@ -279,6 +284,7 @@ function KnockoutSection({
   disabled?: boolean;
   onPick: (matchup: Matchup, id: `0x${string}`, name: string) => void;
 }) {
+  // TODO: implement in Task 3/4
   return (
     <div className="panel-90s p-2 text-xs text-center">
       Knockout bracket &mdash; coming next
