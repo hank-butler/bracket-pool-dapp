@@ -11,6 +11,14 @@ import {
   wcRandomFill,
   getThirdPlaceCandidates,
   advancingThirdCount,
+  getMatchupTeams,
+  R32_MATCHUPS,
+  QF_MATCHUPS,
+  SF_MATCHUPS,
+  SEMIFINAL_MATCHUP_1,
+  SEMIFINAL_MATCHUP_2,
+  FINAL_MATCHUP,
+  THIRD_PLACE_MATCHUP,
   type WCState,
   type Matchup,
   type Group,
@@ -324,19 +332,98 @@ function AdvancingThirdSection({
   );
 }
 
+// ─── WCMatchupBox ─────────────────────────────────────────────────────────────
+
+function WCMatchupBox({
+  matchup,
+  state,
+  disabled,
+  onPick,
+}: {
+  matchup: Matchup;
+  state: WCState;
+  disabled?: boolean;
+  onPick: (matchup: Matchup, id: `0x${string}`, name: string) => void;
+}) {
+  const { teamA, teamB } = getMatchupTeams(matchup, state.picks, state.pickNames);
+  const currentPick = state.picks[matchup.outputSlot];
+
+  return (
+    <div className="bracket-matchup" style={{ minWidth: 160, marginBottom: 4 }}>
+      <div className="text-xs text-gray-500 px-1 pb-1">{matchup.label}</div>
+      {([teamA, teamB] as const).map((team, i) => {
+        const isSelected = !!(team && currentPick === team.id);
+        const isDisabled = disabled || !team;
+        return (
+          <div
+            key={i}
+            className={[
+              'bracket-team',
+              i > 0 ? 'bracket-team-divider' : '',
+              isSelected ? 'bracket-team-selected' : '',
+              isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+              !team ? 'bracket-team-tbd' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            onClick={isDisabled ? undefined : () => team && onPick(matchup, team.id, team.name)}
+          >
+            <span className="bracket-team-name text-xs">{team?.name ?? 'TBD'}</span>
+            {isSelected && <span className="bracket-team-dot">&#9679;</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── KnockoutSection ─────────────────────────────────────────────────────────
+
+const KNOCKOUT_ROUNDS = [
+  { label: 'Round of 32', matchups: R32_MATCHUPS },
+  { label: 'Quarterfinals', matchups: QF_MATCHUPS },
+  { label: 'Semifinals', matchups: SF_MATCHUPS },
+  { label: 'Semi-Finals — Pick Finalists', matchups: [SEMIFINAL_MATCHUP_1, SEMIFINAL_MATCHUP_2] },
+  { label: 'Final + 3rd Place', matchups: [FINAL_MATCHUP, THIRD_PLACE_MATCHUP] },
+];
+
 function KnockoutSection({
-  state: _state,
-  disabled: _disabled,
-  onPick: _onPick,
+  state,
+  disabled,
+  onPick,
 }: {
   state: WCState;
   disabled?: boolean;
   onPick: (matchup: Matchup, id: `0x${string}`, name: string) => void;
 }) {
-  // TODO: implement in Task 3/4
   return (
-    <div className="panel-90s p-2 text-xs text-center">
-      Knockout bracket &mdash; coming next
+    <div>
+      <div className="bracket-region-title">
+        <span className="star">&#9733;</span> Knockout Bracket
+      </div>
+      {disabled && (
+        <p className="text-xs text-gray-500 mb-2">
+          Select 8 advancing 3rd-place teams above to unlock the knockout bracket.
+        </p>
+      )}
+      {KNOCKOUT_ROUNDS.map(({ label, matchups }) => (
+        <div key={label} className="mb-4">
+          <div className="text-xs font-bold mb-2">{label}</div>
+          <div className="overflow-x-auto">
+            <div className="flex flex-wrap gap-2">
+              {matchups.map((matchup) => (
+                <WCMatchupBox
+                  key={matchup.outputSlot}
+                  matchup={matchup}
+                  state={state}
+                  disabled={disabled}
+                  onPick={onPick}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
