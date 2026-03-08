@@ -5,6 +5,7 @@ import { useAccount } from 'wagmi';
 import { formatUnits } from 'viem';
 import { BracketPicker } from './BracketPicker';
 import { StandingsPicker } from './StandingsPicker';
+import { WCPicker } from './WCPicker';
 import { useEnterPool } from '@/hooks/useEnterPool';
 import { getPoolTypeConfig } from '@/lib/poolTypes';
 
@@ -49,7 +50,10 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount,
   const isProcessing = state !== 'idle' && state !== 'success' && state !== 'error';
   const poolConfig = getPoolTypeConfig(poolName);
 
-  const PickerComponent = poolConfig.type === 'standings' ? StandingsPicker : BracketPicker;
+  const PickerComponent =
+    poolConfig.sport === 'World Cup' ? WCPicker :
+    poolConfig.type === 'standings' ? StandingsPicker :
+    BracketPicker;
 
   return (
     <div className="space-y-4">
