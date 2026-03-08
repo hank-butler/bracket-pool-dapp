@@ -382,8 +382,8 @@ function WCMatchupBox({
 const KNOCKOUT_ROUNDS = [
   { label: 'Round of 32', matchups: R32_MATCHUPS },
   { label: 'Quarterfinals', matchups: QF_MATCHUPS },
-  { label: 'Semifinals', matchups: SF_MATCHUPS },
-  { label: 'Semi-Finals — Pick Finalists', matchups: [SEMIFINAL_MATCHUP_1, SEMIFINAL_MATCHUP_2] },
+  { label: 'Quarterfinal Winners — Pick Semifinalists', matchups: SF_MATCHUPS },
+  { label: 'Semifinals — Pick Finalists', matchups: [SEMIFINAL_MATCHUP_1, SEMIFINAL_MATCHUP_2] },
   { label: 'Final + 3rd Place', matchups: [FINAL_MATCHUP, THIRD_PLACE_MATCHUP] },
 ];
 
