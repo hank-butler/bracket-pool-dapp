@@ -5,9 +5,9 @@ import { parseUnits, isAddress } from 'viem';
 import { useCreatePool } from '@/hooks/useAdminPool';
 
 const SPORTS = [
-  { label: 'March Madness', value: 'marchmadness', gameCount: 63, prefix: 'mm:' },
-  { label: 'IPL', value: 'ipl', gameCount: 10, prefix: 'ipl:' },
-  { label: 'World Cup', value: 'worldcup', gameCount: 88, prefix: 'wc:' },
+  { label: 'March Madness', value: 'marchmadness', sportId: 'mm', gameCount: 63, prefix: 'mm:' },
+  { label: 'IPL', value: 'ipl', sportId: 'ipl', gameCount: 10, prefix: 'ipl:' },
+  { label: 'World Cup', value: 'worldcup', sportId: 'wc', gameCount: 88, prefix: 'wc:' },
 ];
 
 const KNOWN_STABLES = [
@@ -24,15 +24,21 @@ export function CreatePoolForm() {
   const [basePrice, setBasePrice] = useState('10');
   const [priceSlope, setPriceSlope] = useState('100');
   const [maxEntries, setMaxEntries] = useState('0');
+  const [payoutBpsRaw, setPayoutBpsRaw] = useState('6000,2500,1500');
 
   const { createPool, isPending, isConfirming, isSuccess, error } = useCreatePool();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isAddress(tokenAddress)) { alert('Invalid token address'); return; }
+    const payoutBps = payoutBpsRaw.split(',').map(s => parseInt(s.trim(), 10));
+    const bpsSum = payoutBps.reduce((a, b) => a + b, 0);
+    if (bpsSum !== 10000) { alert(`Payout bps must sum to 10000 (got ${bpsSum})`); return; }
     createPool({
       token: tokenAddress as `0x${string}`,
       poolName: `${sport.prefix}${poolName}`,
+      sportId: sport.sportId,
+      payoutBps,
       gameCount: sport.gameCount,
       lockTime: Math.floor(new Date(lockTime).getTime() / 1000),
       finalizeDeadline: Math.floor(new Date(finalizeDeadline).getTime() / 1000),
@@ -134,6 +140,17 @@ export function CreatePoolForm() {
               required
             />
           </div>
+        </div>
+        <div>
+          <label className="block text-sm font-bold mb-1">Payout Splits (bps, must sum to 10000)</label>
+          <input
+            className="input-90s w-full"
+            value={payoutBpsRaw}
+            onChange={e => setPayoutBpsRaw(e.target.value)}
+            placeholder="6000,2500,1500"
+            required
+          />
+          <p className="text-xs text-gray-500 mt-1">e.g. 6000,2500,1500 = 60/25/15%; 10000 = winner-take-all</p>
         </div>
         <button type="submit" className="btn-90s" disabled={isPending || isConfirming}>
           {isPending ? 'Confirm in wallet...' : isConfirming ? 'Creating...' : 'Create Pool'}

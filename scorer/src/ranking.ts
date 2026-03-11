@@ -30,31 +30,38 @@ export function rankEntries(entries: ScoredEntry[], actualTiebreaker: number): S
   return withDistance;
 }
 
-export function distributePrizes(rankedEntries: ScoredEntry[], prizePool: bigint): ScoredEntry[] {
+export function distributePrizes(
+  rankedEntries: ScoredEntry[],
+  prizePool: bigint,
+  payoutBps: number[],
+): ScoredEntry[] {
   if (rankedEntries.length === 0) {
     throw new Error('Cannot distribute prizes to empty entry list');
   }
-
-  const distinctRanks = [...new Set(rankedEntries.map(e => e.rank))].sort((a, b) => a - b);
-
-  // Compute prize pool per tier.
-  // Rank 2 and rank 3 use integer division; rank 1 gets the remainder (absorbs inter-tier dust).
-  let tierPools: bigint[];
-  if (rankedEntries.length < 3 || distinctRanks.length === 1) {
-    tierPools = [prizePool];
-  } else if (distinctRanks.length === 2) {
-    const t2 = prizePool * 25n / 100n;
-    tierPools = [prizePool - t2, t2];
-  } else {
-    const t2 = prizePool * 25n / 100n;
-    const t3 = prizePool * 15n / 100n;
-    tierPools = [prizePool - t2 - t3, t2, t3];
+  if (payoutBps.length === 0) {
+    throw new Error('payoutBps must not be empty');
   }
 
-  // Start everyone at 0, then assign prizes tier by tier.
-  const result: ScoredEntry[] = rankedEntries.map(e => ({ ...e, prizeAmount: 0n }));
+  const distinctRanks = [...new Set(rankedEntries.map(e => e.rank))].sort((a, b) => a - b);
+  const tierCount = Math.min(payoutBps.length, distinctRanks.length);
 
-  const paidRanks = distinctRanks.slice(0, tierPools.length);
+  // Compute tier pools from payoutBps.
+  // All tiers except the last use integer division; the last paid tier absorbs dust
+  // so the total always equals prizePool exactly.
+  const tierPools: bigint[] = [];
+  let allocated = 0n;
+  for (let i = 0; i < tierCount; i++) {
+    if (i === tierCount - 1) {
+      tierPools.push(prizePool - allocated);
+    } else {
+      const tierPool = prizePool * BigInt(payoutBps[i]) / 10000n;
+      tierPools.push(tierPool);
+      allocated += tierPool;
+    }
+  }
+
+  const result: ScoredEntry[] = rankedEntries.map(e => ({ ...e, prizeAmount: 0n }));
+  const paidRanks = distinctRanks.slice(0, tierCount);
 
   for (let i = 0; i < paidRanks.length; i++) {
     const tierEntries = result.filter(e => e.rank === paidRanks[i]);
@@ -63,8 +70,7 @@ export function distributePrizes(rankedEntries: ScoredEntry[], prizePool: bigint
     const prizeEach = tierPool / BigInt(tierEntries.length);
     const dust = tierPool - prizeEach * BigInt(tierEntries.length);
 
-    // Sort by entryId asc so index 0 is deterministically the lowest entryId,
-    // which receives the intra-tier dust.
+    // Lowest entryId in each tier receives intra-tier dust (deterministic).
     tierEntries.forEach((e, j) => {
       e.prizeAmount = prizeEach + (j === 0 ? dust : 0n);
     });

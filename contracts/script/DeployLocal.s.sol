@@ -29,9 +29,16 @@ contract DeployLocalScript is Script {
         uint256 basePrice = 10e6;  // 10 USDC
         uint256 priceSlope = 0;    // flat pricing
 
+        uint16[] memory payoutBps = new uint16[](3);
+        payoutBps[0] = 6000;
+        payoutBps[1] = 2500;
+        payoutBps[2] = 1500;
+
         address pool = factory.createPool(
             address(usdc),
             "mm:March Madness 2026",
+            "mm",
+            payoutBps,
             63,
             lockTime,
             finalizeDeadline,

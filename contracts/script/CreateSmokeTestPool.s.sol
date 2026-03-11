@@ -14,9 +14,16 @@ contract CreateSmokeTestPool is Script {
         uint256 lockTime = block.timestamp + 3 minutes;
         uint256 finalizeDeadline = block.timestamp + 1 days;
 
+        uint16[] memory payoutBps = new uint16[](3);
+        payoutBps[0] = 6000;
+        payoutBps[1] = 2500;
+        payoutBps[2] = 1500;
+
         address pool = BracketPoolFactory(factory).createPool(
             vm.envAddress("TOKEN_ADDRESS"),
             "mm:Smoke Test Pool",
+            "mm",
+            payoutBps,
             63,
             lockTime,
             finalizeDeadline,

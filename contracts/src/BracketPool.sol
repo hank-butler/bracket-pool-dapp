@@ -34,6 +34,10 @@ contract BracketPool is ReentrancyGuard {
     uint256 public constant BASIS_POINTS = 10000;
     uint256 public constant MIN_ENTRIES = 2;
 
+    // --- Sport Config ---
+    string public sportId;
+    uint16[] private _payoutBps;
+
     // --- Mutable State ---
     string public poolName;
     uint256 public totalPoolValue;
@@ -67,6 +71,8 @@ contract BracketPool is ReentrancyGuard {
         address _treasury,
         address _admin,
         string memory _poolName,
+        string memory _sportId,
+        uint16[] memory __payoutBps,
         uint256 _gameCount,
         uint256 _lockTime,
         uint256 _finalizeDeadline,
@@ -81,11 +87,14 @@ contract BracketPool is ReentrancyGuard {
         require(_lockTime > block.timestamp, "Lock time must be in future");
         require(_finalizeDeadline > _lockTime, "Deadline must be after lock");
         require(_basePrice > 0, "Invalid base price");
+        require(_sumBps(__payoutBps) == 10000, "Payouts must sum to 10000");
 
         token = IERC20(_token);
         treasury = _treasury;
         admin = _admin;
         poolName = _poolName;
+        sportId = _sportId;
+        _payoutBps = __payoutBps;
         gameCount = _gameCount;
         lockTime = _lockTime;
         finalizeDeadline = _finalizeDeadline;
@@ -93,6 +102,16 @@ contract BracketPool is ReentrancyGuard {
         basePrice = _basePrice;
         priceSlope = _priceSlope;
         maxEntries = _maxEntries;
+    }
+
+    function _sumBps(uint16[] memory bps) internal pure returns (uint256 total) {
+        for (uint256 i = 0; i < bps.length; i++) {
+            total += bps[i];
+        }
+    }
+
+    function getPayoutBps() external view returns (uint16[] memory) {
+        return _payoutBps;
     }
 
     // --- View Functions ---
