@@ -190,6 +190,9 @@ contract BracketPool is ReentrancyGuard {
 
     function setMerkleRoot(bytes32 root) external nonReentrant {
         require(msg.sender == admin, "Not authorized");
+        // Once the finalize deadline passes, refunds open (see refund()) —
+        // finalization must be impossible from then on or the two paths race.
+        require(block.timestamp < finalizeDeadline, "Finalize deadline passed");
         require(gameResults.length == gameCount, "Results not posted");
         require(merkleRoot == bytes32(0), "Merkle root already set");
         require(root != bytes32(0), "Invalid root");
@@ -213,7 +216,8 @@ contract BracketPool is ReentrancyGuard {
         require(!entryRefunded[entryId], "Entry was refunded");
         require(entries[entryId].owner == msg.sender, "Not entry owner");
 
-        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender, entryId, amount))));
+        // Leaf includes address(this) so a proof can never verify on another pool.
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(address(this), msg.sender, entryId, amount))));
         require(MerkleProof.verify(proof, merkleRoot, leaf), "Invalid proof");
 
         entryClaimed[entryId] = true;
