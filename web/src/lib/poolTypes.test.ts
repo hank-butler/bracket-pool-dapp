@@ -1,5 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { getPoolTypeConfig, stripPoolNamePrefix } from './poolTypes';
+import { getPoolTypeConfig, resolvePoolTypeConfig, stripPoolNamePrefix } from './poolTypes';
+
+describe('resolvePoolTypeConfig', () => {
+  it('routes by on-chain sportId, which wins over a mismatched poolName prefix', () => {
+    // The scorer routes solely by sportId — the UI must agree with it.
+    const config = resolvePoolTypeConfig('wc', 'mm:Mislabeled Pool');
+    expect(config?.sport).toBe('World Cup');
+  });
+
+  it('returns null for an unknown sportId instead of silently rendering a picker', () => {
+    expect(resolvePoolTypeConfig('cricket99', 'mm:Some Pool')).toBeNull();
+  });
+
+  it('falls back to the poolName prefix for legacy pools without a sportId', () => {
+    expect(resolvePoolTypeConfig(undefined, 'ipl:IPL 2025')?.sport).toBe('IPL');
+    expect(resolvePoolTypeConfig('', 'wc:World Cup 2026')?.sport).toBe('World Cup');
+  });
+
+  it('returns null when neither sportId nor prefix is recognized', () => {
+    expect(resolvePoolTypeConfig(undefined, 'Some Pool Without Prefix')).toBeNull();
+  });
+});
 
 describe('getPoolTypeConfig', () => {
   it('returns March Madness config for mm: prefix', () => {

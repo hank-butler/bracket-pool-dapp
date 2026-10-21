@@ -53,8 +53,8 @@ export function WCPicker({ gameCount, poolName, onComplete, disabled }: WCPicker
   const handleTiebreaker = useCallback(
     (val: string) => {
       if (disabled) return;
-      if (val === '') return;
-      const num = parseInt(val, 10) || 0;
+      // Empty input clears the tiebreaker (0 = unset for isWCComplete).
+      const num = val === '' ? 0 : parseInt(val, 10) || 0;
       setState((prev) => ({ ...prev, tiebreaker: num }));
     },
     [disabled],
@@ -401,7 +401,7 @@ function KnockoutSection({
       <div className="bracket-region-title">
         <span className="star">&#9733;</span> Knockout Bracket
       </div>
-      {disabled && (
+      {advancingThirdCount(state) < 8 && (
         <p className="text-xs text-gray-500 mb-2">
           Select 8 advancing 3rd-place teams above to unlock the knockout bracket.
         </p>

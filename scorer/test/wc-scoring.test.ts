@@ -50,6 +50,39 @@ describe('worldcup2026.scorePicks — group stage', () => {
   });
 });
 
+describe('worldcup2026.scorePicks — advancing 3rds are a set, not an ordered list', () => {
+  const CODES = ['SEN', 'JPN', 'MAR', 'USA', 'MEX', 'KOR', 'AUS', 'NGA'];
+
+  it('scores all 8 advancing 3rds regardless of slot order', () => {
+    // Picker stores selections in click order; results use canonical order.
+    // A correct SET of 8 teams must earn the full 40 points either way.
+    const picks: Partial<Record<number, `0x${string}`>> = {};
+    const results: Partial<Record<number, `0x${string}`>> = {};
+    CODES.forEach((code, i) => {
+      picks[48 + i] = t(code);
+      results[48 + (7 - i)] = t(code); // reversed order
+    });
+    expect(worldcup2026.scorePicks(makePicks(picks), makeResults(results))).toBe(40);
+  });
+
+  it('scores a partially-correct set by membership (3 of 8 → 15 points)', () => {
+    const picks: Partial<Record<number, `0x${string}`>> = {};
+    CODES.slice(0, 3).forEach((code, i) => { picks[48 + i] = t(code); });
+    ['XX1', 'XX2', 'XX3', 'XX4', 'XX5'].forEach((code, i) => { picks[51 + i] = t(code); });
+    const results: Partial<Record<number, `0x${string}`>> = {};
+    CODES.forEach((code, i) => { results[48 + (7 - i)] = t(code); });
+    expect(worldcup2026.scorePicks(makePicks(picks), makeResults(results))).toBe(15);
+  });
+
+  it('duplicate picks collapse — one correct team repeated earns 5, not 40', () => {
+    const picks: Partial<Record<number, `0x${string}`>> = {};
+    for (let i = 0; i < 8; i++) picks[48 + i] = t('SEN');
+    const results: Partial<Record<number, `0x${string}`>> = {};
+    CODES.forEach((code, i) => { results[48 + i] = t(code); });
+    expect(worldcup2026.scorePicks(makePicks(picks), makeResults(results))).toBe(5);
+  });
+});
+
 describe('worldcup2026.scorePicks — knockout stage', () => {
   it('scores 10 points for correct R32 team (index 56)', () => {
     expect(worldcup2026.scorePicks(makePicks({ 56: t('BRA') }), makeResults({ 56: t('BRA') }))).toBe(10);

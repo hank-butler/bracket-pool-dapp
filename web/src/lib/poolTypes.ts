@@ -61,6 +61,33 @@ const DEFAULT_CONFIG: PoolTypeConfig = {
   picksUnit: 'picks',
 };
 
+// sportId values stored on-chain map to the same configs as name prefixes.
+const SPORT_ID_TO_PREFIX: Record<string, string> = {
+  mm: 'mm:',
+  ipl: 'ipl:',
+  wc: 'wc:',
+};
+
+/**
+ * Resolve the pool type from the on-chain sportId — the same field the scorer
+ * routes on — so picker and scorer can never disagree. The poolName prefix is
+ * only consulted for legacy pools that predate sportId. Returns null for an
+ * unrecognized sport: callers must treat the pool as unsupported rather than
+ * render a picker whose picks would be scored by a different sport module.
+ */
+export function resolvePoolTypeConfig(sportId: string | undefined, poolName: string): PoolTypeConfig | null {
+  if (sportId) {
+    const prefix = SPORT_ID_TO_PREFIX[sportId];
+    return prefix ? POOL_TYPE_PREFIXES[prefix] : null;
+  }
+  for (const prefix of Object.keys(POOL_TYPE_PREFIXES)) {
+    if (poolName.startsWith(prefix)) {
+      return POOL_TYPE_PREFIXES[prefix];
+    }
+  }
+  return null;
+}
+
 export function getPoolTypeConfig(poolName: string): PoolTypeConfig {
   for (const prefix of Object.keys(POOL_TYPE_PREFIXES)) {
     if (poolName.startsWith(prefix)) {

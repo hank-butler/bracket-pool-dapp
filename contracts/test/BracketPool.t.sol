@@ -387,6 +387,29 @@ contract BracketPoolTest is Test {
         pool.setMerkleRoot(bytes32(0));
     }
 
+    function test_setMerkleRoot_revert_afterFinalizeDeadline() public {
+        _setupPoolForMerkleRoot();
+        vm.warp(finalizeDeadline);
+
+        vm.prank(admin);
+        vm.expectRevert("Finalize deadline passed");
+        pool.setMerkleRoot(bytes32(uint256(1)));
+    }
+
+    function test_setMerkleRoot_refundAndFinalize_mutuallyExclusive() public {
+        // Once the finalize deadline passes with no root, refunds open and
+        // finalization must be permanently impossible.
+        _setupPoolForMerkleRoot();
+        vm.warp(finalizeDeadline + 1);
+
+        vm.prank(user1);
+        pool.refund(0);
+
+        vm.prank(admin);
+        vm.expectRevert("Finalize deadline passed");
+        pool.setMerkleRoot(bytes32(uint256(1)));
+    }
+
     function test_setMerkleRoot_revert_notEnoughEntries() public {
         bytes32[] memory picks = _createPicks();
         vm.startPrank(user1);
@@ -407,11 +430,12 @@ contract BracketPoolTest is Test {
     // --- claim() ---
 
     function _buildMerkleTree(
+        address poolAddr,
         address owner1, uint256 entryId1, uint256 amount1,
         address owner2, uint256 entryId2, uint256 amount2
     ) internal pure returns (bytes32 root, bytes32[] memory proof1) {
-        bytes32 leaf1 = keccak256(bytes.concat(keccak256(abi.encode(owner1, entryId1, amount1))));
-        bytes32 leaf2 = keccak256(bytes.concat(keccak256(abi.encode(owner2, entryId2, amount2))));
+        bytes32 leaf1 = keccak256(bytes.concat(keccak256(abi.encode(poolAddr, owner1, entryId1, amount1))));
+        bytes32 leaf2 = keccak256(bytes.concat(keccak256(abi.encode(poolAddr, owner2, entryId2, amount2))));
 
         proof1 = new bytes32[](1);
         if (leaf1 <= leaf2) {
@@ -431,7 +455,7 @@ contract BracketPoolTest is Test {
         uint256 prize1 = prizePool / 2;
         uint256 prize2 = prizePool - prize1;
 
-        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(user1, 0, prize1, user2, 1, prize2);
+        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(address(pool), user1, 0, prize1, user2, 1, prize2);
 
         vm.prank(admin);
         pool.setMerkleRoot(root);
@@ -444,13 +468,71 @@ contract BracketPoolTest is Test {
         assertTrue(pool.entryClaimed(0));
     }
 
+    function test_claim_revert_proofReplayAcrossPools() public {
+        // A proof built for one pool must not verify on another pool,
+        // even with identical owners, entryIds and amounts.
+        BracketPool pool2 = new BracketPool(
+            address(usdc),
+            treasury,
+            admin,
+            "March Madness 2025 B",
+            "mm",
+            defaultPayoutBps,
+            GAME_COUNT,
+            lockTime,
+            finalizeDeadline,
+            BASE_PRICE,
+            PRICE_SLOPE,
+            0
+        );
+
+        bytes32[] memory picks = _createPicks();
+        vm.startPrank(user1);
+        usdc.approve(address(pool), 10_000e6);
+        usdc.approve(address(pool2), 10_000e6);
+        pool.enter(picks, 145);
+        pool2.enter(picks, 145);
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        usdc.approve(address(pool), 10_000e6);
+        usdc.approve(address(pool2), 10_000e6);
+        pool.enter(picks, 150);
+        pool2.enter(picks, 150);
+        vm.stopPrank();
+
+        vm.warp(lockTime + 1);
+        vm.startPrank(admin);
+        pool.setResults(picks);
+        pool2.setResults(picks);
+        vm.stopPrank();
+
+        uint256 prize = 5e6;
+        (bytes32 root, bytes32[] memory proof) =
+            _buildMerkleTree(address(pool), user1, 0, prize, user2, 1, prize);
+
+        vm.startPrank(admin);
+        pool.setMerkleRoot(root);
+        pool2.setMerkleRoot(root); // admin mistakenly reuses the same root
+        vm.stopPrank();
+
+        // Valid on the pool the tree was built for...
+        vm.prank(user1);
+        pool.claim(0, prize, proof);
+
+        // ...but rejected on the other pool.
+        vm.prank(user1);
+        vm.expectRevert("Invalid proof");
+        pool2.claim(0, prize, proof);
+    }
+
     function test_claim_revert_invalidProof() public {
         _setupPoolForMerkleRoot();
         uint256 poolValue = pool.totalPoolValue();
         uint256 fee = poolValue * 500 / 10000;
         uint256 prizePool = poolValue - fee;
 
-        (bytes32 root, ) = _buildMerkleTree(user1, 0, prizePool / 2, user2, 1, prizePool / 2);
+        (bytes32 root, ) = _buildMerkleTree(address(pool), user1, 0, prizePool / 2, user2, 1, prizePool / 2);
 
         vm.prank(admin);
         pool.setMerkleRoot(root);
@@ -469,7 +551,7 @@ contract BracketPoolTest is Test {
         uint256 fee = poolValue * 500 / 10000;
         uint256 prize = (poolValue - fee) / 2;
 
-        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(user1, 0, prize, user2, 1, prize);
+        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(address(pool), user1, 0, prize, user2, 1, prize);
 
         vm.prank(admin);
         pool.setMerkleRoot(root);
@@ -488,7 +570,7 @@ contract BracketPoolTest is Test {
         uint256 fee = poolValue * 500 / 10000;
         uint256 prize = (poolValue - fee) / 2;
 
-        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(user1, 0, prize, user2, 1, prize);
+        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(address(pool), user1, 0, prize, user2, 1, prize);
 
         vm.prank(admin);
         pool.setMerkleRoot(root);
@@ -511,7 +593,7 @@ contract BracketPoolTest is Test {
         uint256 fee = poolValue * 500 / 10000;
         uint256 prize = (poolValue - fee) / 2;
 
-        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(user1, 0, prize, user2, 1, prize);
+        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(address(pool), user1, 0, prize, user2, 1, prize);
 
         vm.prank(admin);
         pool.setMerkleRoot(root);
@@ -651,7 +733,7 @@ contract BracketPoolTest is Test {
         uint256 fee = poolValue * 500 / 10000;
         uint256 prize = (poolValue - fee) / 2;
 
-        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(user1, 0, prize, user2, 1, prize);
+        (bytes32 root, bytes32[] memory proof) = _buildMerkleTree(address(pool), user1, 0, prize, user2, 1, prize);
 
         vm.prank(admin);
         pool.setMerkleRoot(root);

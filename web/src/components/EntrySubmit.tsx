@@ -7,7 +7,7 @@ import { BracketPicker } from './BracketPicker';
 import { StandingsPicker } from './StandingsPicker';
 import { WCPicker } from './WCPicker';
 import { useEnterPool } from '@/hooks/useEnterPool';
-import { getPoolTypeConfig } from '@/lib/poolTypes';
+import { resolvePoolTypeConfig } from '@/lib/poolTypes';
 
 interface EntrySubmitProps {
   poolAddress: `0x${string}`;
@@ -15,9 +15,10 @@ interface EntrySubmitProps {
   currentPrice: bigint;
   gameCount: number;
   poolName: string;
+  sportId?: string;
 }
 
-export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount, poolName }: EntrySubmitProps) {
+export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount, poolName, sportId }: EntrySubmitProps) {
   const { address } = useAccount();
   const {
     state,
@@ -48,7 +49,21 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount,
   );
 
   const isProcessing = state !== 'idle' && state !== 'success' && state !== 'error';
-  const poolConfig = getPoolTypeConfig(poolName);
+  // Route by the on-chain sportId — the same field the scorer uses — so the
+  // picker and the scoring module can never disagree.
+  const poolConfig = resolvePoolTypeConfig(sportId, poolName);
+
+  if (!poolConfig) {
+    return (
+      <div className="panel-90s p-4">
+        <p className="status-error">Unsupported pool</p>
+        <p className="text-xs mt-1">
+          This pool&apos;s sport (&quot;{sportId || poolName}&quot;) is not supported by this
+          frontend version. Entries submitted here could not be scored correctly.
+        </p>
+      </div>
+    );
+  }
 
   const PickerComponent =
     poolConfig.sport === 'World Cup' ? WCPicker :

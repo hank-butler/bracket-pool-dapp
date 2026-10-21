@@ -155,8 +155,29 @@ describe('distributePrizes (tiered)', () => {
     expect(total).toBe(100_000_001n);
   });
 
-  it('3 tiers with 3-way tie at rank 2: each tier split evenly', () => {
-    // ranks: [1, 2, 2, 2, 3] — three tied at rank 2, one at rank 3
+  it('tie for 1st consumes the positions it occupies: [1,1,3] gets 85% split, then 15%', () => {
+    // Two tied for 1st occupy positions 1+2 → they split 60%+25%.
+    // The next entry (rank 3) occupies position 3 → 15%. It must NOT
+    // out-earn the tied winners (the pre-fix behavior paid it 40%).
+    const entries = [
+      makeEntry(0, '0xA', 300, 145),
+      makeEntry(1, '0xB', 300, 145),
+      makeEntry(2, '0xC', 100, 145),
+    ];
+    const ranked = rankEntries(entries, 145);
+    const result = distributePrizes(ranked, 100_000_000n, [6000, 2500, 1500]);
+
+    expect(result.find(e => e.entryId === 0)?.prizeAmount).toBe(42_500_000n);
+    expect(result.find(e => e.entryId === 1)?.prizeAmount).toBe(42_500_000n);
+    expect(result.find(e => e.entryId === 2)?.prizeAmount).toBe(15_000_000n);
+    const total = result.reduce((sum, e) => sum + e.prizeAmount, 0n);
+    expect(total).toBe(100_000_000n);
+  });
+
+  it('3-way tie at rank 2 consumes positions 2-4: tied group splits 25%+15%, rank 5 gets 0', () => {
+    // ranks: [1, 2, 2, 2, 5] — the tied trio occupies positions 2,3,4
+    // so they split tiers 2+3 (25%+15% = 48M), and the 5th-place entry
+    // is outside the paid positions entirely.
     const entries = [
       makeEntry(0, '0xA', 400, 145),
       makeEntry(1, '0xB', 200, 145),
@@ -168,13 +189,28 @@ describe('distributePrizes (tiered)', () => {
     const result = distributePrizes(ranked, 120_000_000n, [6000, 2500, 1500]);
 
     expect(result.find(e => e.entryId === 0)?.prizeAmount).toBe(72_000_000n); // 60%
-    // 25% of 120_000_000 = 30_000_000, split 3 ways = 10_000_000 each
-    expect(result.find(e => e.entryId === 1)?.prizeAmount).toBe(10_000_000n);
-    expect(result.find(e => e.entryId === 2)?.prizeAmount).toBe(10_000_000n);
-    expect(result.find(e => e.entryId === 3)?.prizeAmount).toBe(10_000_000n);
-    expect(result.find(e => e.entryId === 4)?.prizeAmount).toBe(18_000_000n); // 15%
+    expect(result.find(e => e.entryId === 1)?.prizeAmount).toBe(16_000_000n);
+    expect(result.find(e => e.entryId === 2)?.prizeAmount).toBe(16_000_000n);
+    expect(result.find(e => e.entryId === 3)?.prizeAmount).toBe(16_000_000n);
+    expect(result.find(e => e.entryId === 4)?.prizeAmount).toBe(0n); // position 5 unpaid
     const total = result.reduce((sum, e) => sum + e.prizeAmount, 0n);
     expect(total).toBe(120_000_000n);
+  });
+
+  it('fewer entries than tiers: unpaid tail tiers fold into the last entry', () => {
+    // 2 entries, 3 tiers — position 3 is never occupied, so its 15%
+    // folds into the last finisher (positions 2+3 = 40%).
+    const entries = [
+      makeEntry(0, '0xA', 300, 145),
+      makeEntry(1, '0xB', 200, 145),
+    ];
+    const ranked = rankEntries(entries, 145);
+    const result = distributePrizes(ranked, 100_000_000n, [6000, 2500, 1500]);
+
+    expect(result.find(e => e.entryId === 0)?.prizeAmount).toBe(60_000_000n);
+    expect(result.find(e => e.entryId === 1)?.prizeAmount).toBe(40_000_000n);
+    const total = result.reduce((sum, e) => sum + e.prizeAmount, 0n);
+    expect(total).toBe(100_000_000n);
   });
 
   it('rank 4+ entries get 0', () => {
