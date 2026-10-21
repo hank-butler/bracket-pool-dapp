@@ -199,14 +199,27 @@ export function StandingsPicker({ gameCount, poolName, onComplete, disabled }: S
                   team ? 'standings-slot-filled' : ''
                 }`}
                 onDragOver={(e) => handleDragOver(e, i)}
-                onDrop={() => handleDrop(i)}
+                onDrop={(e) => {
+                  // Available-team drags carry the team id in dataTransfer;
+                  // reorder drags (dragIndex set) carry nothing.
+                  const droppedId = e.dataTransfer.getData('text/plain');
+                  const droppedTeam = droppedId
+                    ? IPL_TEAMS.find((t) => t.id === droppedId)
+                    : undefined;
+                  handleDrop(i, droppedTeam);
+                }}
               >
                 <span className="standings-rank">#{i + 1}</span>
                 {team ? (
                   <div
                     className="standings-team"
                     draggable={!disabled}
-                    onDragStart={() => handleDragStart(i)}
+                    onDragStart={(e) => {
+                      // Firefox requires setData for the drag to start; the
+                      // empty payload routes the drop to the reorder path.
+                      e.dataTransfer.setData('text/plain', '');
+                      handleDragStart(i);
+                    }}
                     onDragEnd={handleDragEnd}
                   >
                     <span className="standings-team-abbr">{team.abbreviation}</span>

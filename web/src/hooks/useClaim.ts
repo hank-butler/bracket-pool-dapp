@@ -46,6 +46,28 @@ function fetchReducer(state: FetchState, action: FetchAction): FetchState {
   }
 }
 
+const IPFS_GATEWAYS = [
+  'https://ipfs.io/ipfs/',
+  'https://gateway.pinata.cloud/ipfs/',
+  'https://cloudflare-ipfs.com/ipfs/',
+];
+const GATEWAY_TIMEOUT_MS = 10_000;
+
+// A single slow or blocked gateway must not make prizes unclaimable.
+async function fetchProofsJSON(cid: string): Promise<ScorerOutputJSON> {
+  let lastError: unknown;
+  for (const gateway of IPFS_GATEWAYS) {
+    try {
+      const res = await fetch(`${gateway}${cid}`, { signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS) });
+      if (!res.ok) throw new Error(`IPFS fetch failed: ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('All IPFS gateways failed');
+}
+
 export function useClaim(
   poolAddress: `0x${string}`,
   proofsCID: string,
@@ -72,11 +94,7 @@ export function useClaim(
     let cancelled = false;
     dispatch({ type: 'start' });
 
-    fetch(`https://ipfs.io/ipfs/${proofsCID}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`IPFS fetch failed: ${res.status}`);
-        return res.json();
-      })
+    fetchProofsJSON(proofsCID)
       .then((data: ScorerOutputJSON) => {
         if (cancelled) return;
 

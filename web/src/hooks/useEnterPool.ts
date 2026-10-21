@@ -3,6 +3,11 @@ import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 
 import { erc20Abi } from 'viem';
 import { BracketPoolABI } from '@/lib/contracts';
 
+// enter() pulls getCurrentPrice() at transaction time, so any entry that
+// lands between approval and submission raises the amount pulled. Approve
+// with a 10% buffer so the entry doesn't revert on insufficient allowance.
+const APPROVAL_BUFFER_BPS = 1000n;
+
 type EnterState =
   | 'idle'
   | 'approving'
@@ -21,12 +26,21 @@ export function useEnterPool(
   const [state, setState] = useState<EnterState>('idle');
   const [error, setError] = useState<string | null>(null);
 
-  const { data: allowance } = useReadContract({
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: usdcAddress,
     abi: erc20Abi,
     functionName: 'allowance',
     args: userAddress ? [userAddress, poolAddress] : undefined,
     query: { enabled: !!userAddress },
+  });
+
+  // The bonding curve raises the price with every entry, so the price passed
+  // in from the page is a stale snapshot. Track the live on-chain price and
+  // re-read it at submit time.
+  const { data: livePrice, refetch: refetchPrice } = useReadContract({
+    address: poolAddress,
+    abi: BracketPoolABI,
+    functionName: 'getCurrentPrice',
   });
 
   const {
@@ -49,7 +63,8 @@ export function useEnterPool(
     hash: enterTxHash,
   });
 
-  const needsApproval = !allowance || allowance < price;
+  const requiredPrice = (livePrice as bigint | undefined) ?? price;
+  const needsApproval = !allowance || allowance < requiredPrice;
 
   const submitEntry = useCallback(
     (picks: `0x${string}`[], tiebreaker: number) => {
@@ -80,14 +95,23 @@ export function useEnterPool(
       setError(null);
 
       try {
-        if (needsApproval) {
+        // Re-read price and allowance at click time — both can be stale.
+        const [freshAllowance, freshPrice] = await Promise.all([
+          refetchAllowance().then(r => r.data as bigint | undefined),
+          refetchPrice().then(r => r.data as bigint | undefined),
+        ]);
+        const currentPrice = freshPrice ?? requiredPrice;
+        const currentAllowance = freshAllowance ?? 0n;
+
+        if (currentAllowance < currentPrice) {
           setState('approving');
+          const approveAmount = currentPrice * (10000n + APPROVAL_BUFFER_BPS) / 10000n;
           writeApprove(
             {
               address: usdcAddress,
               abi: erc20Abi,
               functionName: 'approve',
-              args: [poolAddress, price],
+              args: [poolAddress, approveAmount],
             },
             {
               onSuccess: () => {
@@ -107,7 +131,7 @@ export function useEnterPool(
         setState('error');
       }
     },
-    [needsApproval, writeApprove, usdcAddress, poolAddress, price, submitEntry],
+    [refetchAllowance, refetchPrice, requiredPrice, writeApprove, usdcAddress, poolAddress, submitEntry],
   );
 
   // Drive state transitions when tx receipts arrive
