@@ -20,8 +20,8 @@ export async function runScorer(
 ): Promise<ScorerOutput> {
   const { sportId, payoutBps } = await readPoolConfig(poolAddress, rpcUrl);
 
-  const module = SPORT_MODULES[sportId];
-  if (!module) throw new Error(`Unknown sportId: "${sportId}". Registered: ${Object.keys(SPORT_MODULES).join(', ')}`);
+  const sportModule = SPORT_MODULES[sportId];
+  if (!sportModule) throw new Error(`Unknown sportId: "${sportId}". Registered: ${Object.keys(SPORT_MODULES).join(', ')}`);
 
   const entries = await readEntries(poolAddress, rpcUrl, undefined, fromBlock);
   const results = await readGameResults(poolAddress, rpcUrl);
@@ -29,7 +29,7 @@ export async function runScorer(
 
   const scored: ScoredEntry[] = entries.map(e => ({
     ...e,
-    score: module.scorePicks(e.picks, results),
+    score: sportModule.scorePicks(e.picks, results),
     tiebreakerDistance: 0,
     rank: 0,
     prizeAmount: 0n,
@@ -52,7 +52,7 @@ export async function runScorer(
       amount: e.prizeAmount,
     }));
 
-  const { root, proofs } = buildMerkleTree(winners);
+  const { root, proofs } = buildMerkleTree(poolAddress, winners);
 
   return {
     poolAddress,

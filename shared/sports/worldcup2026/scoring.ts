@@ -37,11 +37,23 @@ export const worldcup2026: SportModule = {
     if (picks.length !== 88 || results.length !== 88) {
       throw new Error(`Expected 88 picks/results, got picks=${picks.length} results=${results.length}`);
     }
+    const ZERO = '0x' + '0'.repeat(64);
     let score = 0;
     for (let i = 0; i < 88; i++) {
+      // Slots 48–55 hold the 8 advancing 3rd-place teams, which have no
+      // inherent order — score them by set membership below instead.
+      if (i >= 48 && i < 56) continue;
       if (picks[i].toLowerCase() === results[i].toLowerCase()) {
         score += getPointsForIndex(i);
       }
+    }
+
+    const resultThirds = new Set(
+      results.slice(48, 56).map(r => r.toLowerCase()).filter(r => r !== ZERO),
+    );
+    const pickedThirds = new Set(picks.slice(48, 56).map(p => p.toLowerCase()));
+    for (const team of pickedThirds) {
+      if (resultThirds.has(team)) score += 5;
     }
     return score;
   },
