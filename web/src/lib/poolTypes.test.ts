@@ -13,8 +13,14 @@ describe('resolvePoolTypeConfig', () => {
   });
 
   it('falls back to the poolName prefix for legacy pools without a sportId', () => {
-    expect(resolvePoolTypeConfig(undefined, 'ipl:IPL 2025')?.sport).toBe('IPL');
+    expect(resolvePoolTypeConfig(undefined, 'mm:March Madness 2027')?.sport).toBe('March Madness');
     expect(resolvePoolTypeConfig('', 'wc:World Cup 2026')?.sport).toBe('World Cup');
+  });
+
+  it('returns null for sports the scorer has no module for, so no one can pay into an unscorable pool', () => {
+    // scorer/src/pipeline.ts SPORT_MODULES registers only mm and wc.
+    expect(resolvePoolTypeConfig('ipl', 'ipl:IPL 2025')).toBeNull();
+    expect(resolvePoolTypeConfig(undefined, 'ipl:IPL 2025')).toBeNull();
   });
 
   it('returns null when neither sportId nor prefix is recognized', () => {

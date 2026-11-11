@@ -200,6 +200,9 @@ export function StandingsPicker({ gameCount, poolName, onComplete, disabled }: S
                 }`}
                 onDragOver={(e) => handleDragOver(e, i)}
                 onDrop={(e) => {
+                  // Cancel the browser default — Firefox otherwise treats the
+                  // dropped text/plain id as a URL/search and navigates away.
+                  e.preventDefault();
                   // Available-team drags carry the team id in dataTransfer;
                   // reorder drags (dragIndex set) carry nothing.
                   const droppedId = e.dataTransfer.getData('text/plain');

@@ -49,7 +49,7 @@ function fetchReducer(state: FetchState, action: FetchAction): FetchState {
 const IPFS_GATEWAYS = [
   'https://ipfs.io/ipfs/',
   'https://gateway.pinata.cloud/ipfs/',
-  'https://cloudflare-ipfs.com/ipfs/',
+  'https://dweb.link/ipfs/', // cloudflare-ipfs.com was retired in 2024
 ];
 const GATEWAY_TIMEOUT_MS = 10_000;
 

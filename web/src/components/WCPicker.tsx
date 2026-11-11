@@ -239,12 +239,17 @@ function GroupCard({
             key={pos}
             className={rowClass}
             draggable={!disabled}
-            onDragStart={() => setDraggingPos(pos)}
+            onDragStart={(e) => {
+              // Firefox won't start a drag without data on the transfer.
+              e.dataTransfer.setData('text/plain', '');
+              setDraggingPos(pos);
+            }}
             onDragOver={(e) => {
               e.preventDefault();
               setOverPos(pos);
             }}
-            onDrop={() => {
+            onDrop={(e) => {
+              e.preventDefault(); // stop Firefox's default drop navigation
               if (draggingPos !== null && draggingPos !== pos) {
                 onSwap(draggingPos, pos);
               }

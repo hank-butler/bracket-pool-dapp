@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { erc20Abi } from 'viem';
 import { BracketPoolABI } from '@/lib/contracts';
@@ -10,6 +10,7 @@ const APPROVAL_BUFFER_BPS = 1000n;
 
 type EnterState =
   | 'idle'
+  | 'preparing'
   | 'approving'
   | 'waitingApproval'
   | 'entering'
@@ -25,6 +26,11 @@ export function useEnterPool(
 ) {
   const [state, setState] = useState<EnterState>('idle');
   const [error, setError] = useState<string | null>(null);
+  // Synchronous guard against double submission. enter() awaits RPC reads
+  // before it can pick approve vs. enter; a state update alone doesn't block a
+  // second click delivered before React re-renders, and two flows would mean
+  // two paid entries.
+  const inFlight = useRef(false);
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: usdcAddress,
@@ -41,6 +47,7 @@ export function useEnterPool(
     address: poolAddress,
     abi: BracketPoolABI,
     functionName: 'getCurrentPrice',
+    query: { refetchInterval: 15_000 },
   });
 
   const {
@@ -83,6 +90,7 @@ export function useEnterPool(
           onError: (err) => {
             setError(err.message);
             setState('error');
+            inFlight.current = false;
           },
         },
       );
@@ -92,7 +100,10 @@ export function useEnterPool(
 
   const enter = useCallback(
     async (picks: `0x${string}`[], tiebreaker: number) => {
+      if (inFlight.current) return;
+      inFlight.current = true;
       setError(null);
+      setState('preparing');
 
       try {
         // Re-read price and allowance at click time — both can be stale.
@@ -120,6 +131,7 @@ export function useEnterPool(
               onError: (err) => {
                 setError(err.message);
                 setState('error');
+                inFlight.current = false;
               },
             },
           );
@@ -129,6 +141,7 @@ export function useEnterPool(
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Unknown error');
         setState('error');
+        inFlight.current = false;
       }
     },
     [refetchAllowance, refetchPrice, requiredPrice, writeApprove, usdcAddress, poolAddress, submitEntry],
@@ -140,10 +153,12 @@ export function useEnterPool(
     // This is handled by the component calling submitEntry after approval.
   }
   if (state === 'waitingEntry' && enterConfirmed) {
+    // inFlight stays set until reset() ("Submit another entry").
     setState('success');
   }
 
   const reset = useCallback(() => {
+    inFlight.current = false;
     setState('idle');
     setError(null);
     resetApprove();
@@ -154,6 +169,10 @@ export function useEnterPool(
     state,
     error,
     needsApproval,
+    // Live on-chain price (falls back to the page snapshot until loaded).
+    // Display this, not the snapshot: it's what enter() will actually charge.
+    currentPrice: requiredPrice,
+    approvalBufferBps: APPROVAL_BUFFER_BPS,
     enter,
     submitEntry,
     approveConfirmed,
