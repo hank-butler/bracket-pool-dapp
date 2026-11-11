@@ -193,6 +193,8 @@ contract BracketPool is ReentrancyGuard {
         // Once the finalize deadline passes, refunds open (see refund()) —
         // finalization must be impossible from then on or the two paths race.
         require(block.timestamp < finalizeDeadline, "Finalize deadline passed");
+        // Cancellation opens refunds, so it must be terminal for the same reason.
+        require(!cancelled, "Pool cancelled");
         require(gameResults.length == gameCount, "Results not posted");
         require(merkleRoot == bytes32(0), "Merkle root already set");
         require(root != bytes32(0), "Invalid root");

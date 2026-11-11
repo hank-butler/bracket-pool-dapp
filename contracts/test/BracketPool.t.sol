@@ -410,6 +410,22 @@ contract BracketPoolTest is Test {
         pool.setMerkleRoot(bytes32(uint256(1)));
     }
 
+    function test_setMerkleRoot_revert_afterCancel() public {
+        // A cancelled pool has refunds open — finalizing it would take the fee
+        // and promise prizes out of funds already returned to entrants.
+        _setupPoolForMerkleRoot();
+
+        vm.prank(admin);
+        pool.cancelPool();
+
+        vm.prank(user1);
+        pool.refund(0);
+
+        vm.prank(admin);
+        vm.expectRevert("Pool cancelled");
+        pool.setMerkleRoot(bytes32(uint256(1)));
+    }
+
     function test_setMerkleRoot_revert_notEnoughEntries() public {
         bytes32[] memory picks = _createPicks();
         vm.startPrank(user1);
