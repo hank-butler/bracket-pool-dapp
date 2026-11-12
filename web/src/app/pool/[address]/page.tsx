@@ -73,6 +73,7 @@ export default function PoolPage({ params }: { params: Promise<{ address: string
               currentPrice={pool.currentPrice}
               gameCount={pool.gameCount}
               poolName={pool.poolName}
+              sportId={pool.sportId}
             />
           </div>
         )}

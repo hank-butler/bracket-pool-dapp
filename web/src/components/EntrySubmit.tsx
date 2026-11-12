@@ -7,7 +7,7 @@ import { BracketPicker } from './BracketPicker';
 import { StandingsPicker } from './StandingsPicker';
 import { WCPicker } from './WCPicker';
 import { useEnterPool } from '@/hooks/useEnterPool';
-import { getPoolTypeConfig } from '@/lib/poolTypes';
+import { resolvePoolTypeConfig } from '@/lib/poolTypes';
 
 interface EntrySubmitProps {
   poolAddress: `0x${string}`;
@@ -15,13 +15,16 @@ interface EntrySubmitProps {
   currentPrice: bigint;
   gameCount: number;
   poolName: string;
+  sportId?: string;
 }
 
-export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount, poolName }: EntrySubmitProps) {
+export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount, poolName, sportId }: EntrySubmitProps) {
   const { address } = useAccount();
   const {
     state,
     error,
+    currentPrice: livePrice,
+    approvalBufferBps,
     enter,
     submitEntry,
     approveConfirmed,
@@ -48,7 +51,21 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount,
   );
 
   const isProcessing = state !== 'idle' && state !== 'success' && state !== 'error';
-  const poolConfig = getPoolTypeConfig(poolName);
+  // Route by the on-chain sportId — the same field the scorer uses — so the
+  // picker and the scoring module can never disagree.
+  const poolConfig = resolvePoolTypeConfig(sportId, poolName);
+
+  if (!poolConfig) {
+    return (
+      <div className="panel-90s p-4">
+        <p className="status-error">Unsupported pool</p>
+        <p className="text-xs mt-1">
+          This pool&apos;s sport (&quot;{sportId || poolName}&quot;) is not supported by this
+          frontend version. Entries submitted here could not be scored correctly.
+        </p>
+      </div>
+    );
+  }
 
   const PickerComponent =
     poolConfig.sport === 'World Cup' ? WCPicker :
@@ -59,8 +76,12 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount,
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg">Submit Your {poolConfig.type === 'standings' ? 'Prediction' : 'Bracket'}</h2>
-        <p className="text-xs">
-          Entry price: <b>${formatUnits(currentPrice, 6)} USDC</b>
+        <p className="text-xs text-right">
+          Entry price: <b>${formatUnits(livePrice, 6)} USDC</b>
+          <br />
+          <span title={`The price rises with every entry. You pay the price when your entry confirms; USDC approval includes a ${Number(approvalBufferBps) / 100}% buffer to cover that.`}>
+            Rises with each entry &mdash; final price set at confirmation
+          </span>
         </p>
       </div>
 
@@ -92,6 +113,7 @@ export function EntrySubmit({ poolAddress, usdcAddress, currentPrice, gameCount,
           {isProcessing && (
             <div className="panel-90s p-4">
               <p className="status-warning">
+                {state === 'preparing' && 'Checking current price...'}
                 {state === 'approving' && 'Approve USDC spending in your wallet...'}
                 {state === 'waitingApproval' && 'Waiting for approval confirmation...'}
                 {state === 'entering' && 'Confirm entry submission in your wallet...'}

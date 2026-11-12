@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { parseUnits, isAddress } from 'viem';
 import { useCreatePool } from '@/hooks/useAdminPool';
+import { SCORABLE_SPORT_IDS } from '@/lib/poolTypes';
 
 const SPORTS = [
   { label: 'March Madness', value: 'marchmadness', sportId: 'mm', gameCount: 63, prefix: 'mm:' },
   { label: 'IPL', value: 'ipl', sportId: 'ipl', gameCount: 10, prefix: 'ipl:' },
   { label: 'World Cup', value: 'worldcup', sportId: 'wc', gameCount: 88, prefix: 'wc:' },
-];
+// Only offer sports the scorer can finalize — otherwise entry fees get stuck.
+].filter(s => SCORABLE_SPORT_IDS.has(s.sportId));
 
 const KNOWN_STABLES = [
   { label: 'USDC (Sepolia)', address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' },
